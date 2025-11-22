@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed-Distance-Time Learning Tool</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
+  .container { display: flex; height: 100vh; }
+  .left-panel { flex: 3; display: flex; flex-direction: column; }
+  .tabs { display: flex; background: #222; color: white; }
+  .tabs button {
+      flex: 1; padding: 10px; background: #222; color: white;
+      border: none; cursor: pointer; font-size: 16px;
+  }
+  .tabs button.active { background: #444; }
+  .tab-content { flex: 1; padding: 20px; background: white; }
+  .track { width: 90%; height: 80px; background: #ddd; border-radius: 10px;
+           margin: 20px auto; position: relative; }
+  .object { width: 40px; height: 40px; background: red; border-radius: 50%;
+            position: absolute; top: 20px; left: 0; }
+  .controls { display: flex; flex-direction: column; gap: 10px; width: 80%; margin: auto; }
+  .sidebar { flex: 1; background: #fafafa; border-left: 1px solid #ccc;
+             display: flex; flex-direction: column; padding: 10px; }
+  .chatbot { flex: 1; border: 1px solid #ccc; border-radius: 5px;
+             padding: 8px; background: white; overflow-y: auto; }
+  .chat-input { display: flex; margin-top: 10px; }
+  .chat-input input { flex: 1; padding: 8px; }
+  .chat-input button { padding: 8px 12px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="left-panel">
+    <div class="tabs">
+      <button id="tab1" class="active" onclick="switchTab(1)">Foundation</button>
+      <button id="tab2" onclick="switchTab(2)">Formula Discovery</button>
+      <button id="tab3" onclick="switchTab(3)">Comparative</button>
+    </div>
+
+    <!-- Tab Contents -->
+    <div id="content1" class="tab-content">
+      <h2>Foundation Simulation</h2>
+      <div class="track"><div class="object" id="obj1"></div></div>
+      <div class="controls">
+        <label>Speed (m/s): <span id="speedVal1">5</span></label>
+        <input type="range" id="speed1" min="1" max="20" value="5">
+        <label>Distance (m): <span id="distVal1">100</span></label>
+        <input type="range" id="dist1" min="50" max="300" value="100">
+        <button onclick="startSim(1)">Start</button>
+        <button onclick="resetSim(1)">Reset</button>
+      </div>
+    </div>
+
+    <div id="content2" class="tab-content" style="display:none;">
+      <h2>Formula Discovery Simulation</h2>
+      <p>Adjust two values; system calculates the third.</p>
+      <div class="controls">
+        <label>Speed (m/s): <input type="number" id="speed2" value="10"></label>
+        <label>Time (s): <input type="number" id="time2" value="5"></label>
+        <button onclick="calcDistance()">Calculate Distance</button>
+        <p id="result2"></p>
+      </div>
+    </div>
+
+    <div id="content3" class="tab-content" style="display:none;">
+      <h2>Comparative Simulation</h2>
+      <div class="track"><div class="object" id="obj3a" style="background:blue;"></div>
+                         <div class="object" id="obj3b" style="background:green; top:40px;"></div></div>
+      <div class="controls">
+        <label>Speed A (m/s): <span id="speedA">6</span></label>
+        <input type="range" id="speed3a" min="1" max="15" value="6">
+        <label>Speed B (m/s): <span id="speedB">10</span></label>
+        <input type="range" id="speed3b" min="1" max="15" value="10">
+        <button onclick="startSim(3)">Start Race</button>
+        <button onclick="resetSim(3)">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chatbot -->
+  <div class="sidebar">
+    <h3>Chatbot</h3>
+    <div class="chatbot" id="chatbox">
+      <p><b>Bot:</b> Hi! Select a simulation to start learning.</p>
+    </div>
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="Ask a question...">
+      <button onclick="sendMsg()">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let anim1, anim3;
+let pos1=0, pos3a=0, pos3b=0;
+
+// Tab switching
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById('content'+tab).style.display = 'block';
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab'+tab).classList.add('active');
+}
+
+// Foundation Simulation
+document.getElementById('speed1').oninput = function() {
+  document.getElementById('speedVal1').textContent = this.value;
+}
+document.getElementById('dist1').oninput = function() {
+  document.getElementById('distVal1').textContent = this.value;
+}
+
+function startSim(mode) {
+  if(mode===1){
+    let spd = parseInt(document.getElementById('speed1').value);
+    let dist = parseInt(document.getElementById('dist1').value);
+    let trackWidth = document.querySelector('#content1 .track').offsetWidth - 40;
+    let ppm = trackWidth / dist;
+    clearInterval(anim1);
+    anim1=setInterval(()=>{
+      pos1 += ppm*spd/10;
+      if(pos1>=trackWidth){pos1=trackWidth; clearInterval(anim1);}
+      document.getElementById('obj1').style.left=pos1+'px';
+    },100);
+  } else if(mode===3){
+    let spdA = parseInt(document.getElementById('speed3a').value);
+    let spdB = parseInt(document.getElementById('speed3b').value);
+    document.getElementById('speedA').textContent=spdA;
+    document.getElementById('speedB').textContent=spdB;
+    let trackWidth = document.querySelector('#content3 .track').offsetWidth - 40;
+    let ppm = trackWidth / 200;
+    clearInterval(anim3);
+    anim3=setInterval(()=>{
+      pos3a += ppm*spdA;
+      pos3b += ppm*spdB;
+      if(pos3a>=trackWidth || pos3b>=trackWidth){clearInterval(anim3);}
+      document.getElementById('obj3a').style.left=pos3a+'px';
+      document.getElementById('obj3b').style.left=pos3b+'px';
+    },100);
+  }
+}
+
+function resetSim(mode) {
+  if(mode===1){
+    clearInterval(anim1); pos1=0;
+    document.getElementById('obj1').style.left='0px';
+  } else if(mode===3){
+    clearInterval(anim3); pos3a=0; pos3b=0;
+    document.getElementById('obj3a').style.left='0px';
+    document.getElementById('obj3b').style.left='0px';
+  }
+}
+
+// Formula Discovery Calculation
+function calcDistance(){
+  let s = parseFloat(document.getElementById('speed2').value);
+  let t = parseFloat(document.getElementById('time2').value);
+  document.getElementById('result2').textContent = "Distance = " + (s*t).toFixed(2) + " m";
+}
+
+// Chatbot placeholder
+function sendMsg(){
+  let input=document.getElementById('chatInput').value.trim();
+  if(!input) return;
+  let box=document.getElementById('chatbox');
+  box.innerHTML+=`<p><b>You:</b> ${input}</p>`;
+  box.innerHTML+=`<p><b>Bot:</b> (Placeholder) I will guide you soon!</p>`;
+  document.getElementById('chatInput').value='';
+  box.scrollTop=box.scrollHeight;
+}
+</script>
+
+</body>
+</html>

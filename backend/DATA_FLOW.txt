@@ -1,0 +1,276 @@
+═══════════════════════════════════════════════════════════════════════════
+                         DATA FLOW DIAGRAM
+═══════════════════════════════════════════════════════════════════════════
+
+This explains how data flows through the system during testing.
+
+
+CURRENT SETUP (Testing Phase)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  1. YOU edit easy_test.py                                           │
+│                                                                     │
+│     TEST_SIMULATION = "fractions"      ← You type this             │
+│     TEST_LEVEL = "Beginner"            ← You type this             │
+│     TEST_CALIBRE = "Medium"            ← You type this             │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓
+                    You run: python easy_test.py
+                              ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  2. Test file creates initial state                                 │
+│                                                                     │
+│     state = {                                                       │
+│         "simulation_name": "fractions",     ← From your input      │
+│         "learner_profile": {                                       │
+│             "level": "Beginner",            ← From your input      │
+│             "calibre": "Medium"             ← From your input      │
+│         },                                                          │
+│         "simulation_url": "",               ← Empty, will be filled │
+│         "control_mode": "MANUAL",           ← Empty, will be filled │
+│         "concepts": [],                     ← Empty, will be filled │
+│         # ... other empty fields                                   │
+│     }                                                               │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓
+                    Passes state to backend
+                              ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  3. simulation_ingest_node() processes state                        │
+│     (backend/nodes/ingestion.py)                                    │
+│                                                                     │
+│     • Reads: simulation_name = "fractions"                          │
+│     • Reads: learner_profile = {level: "Beginner", ...}            │
+│     • Validates: Are these values present? ✓                        │
+│     • Fetches: URL from config.py                                   │
+│     • Determines: Control mode from config.py                       │
+│     • Creates: view_config based on mode                            │
+│     • Returns: Updated state fields                                 │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓
+                    Returns result dictionary
+                              ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  4. Test file displays results                                      │
+│                                                                     │
+│     ✅ Ingestion Complete!                                          │
+│        • Loaded simulation: fractions                               │
+│        • URL: ../SimulationsNCERT-main/.../fractions.html          │
+│        • Control mode: MANUAL                                       │
+│        • Can agent modify params: False                             │
+└─────────────────────────────────────────────────────────────────────┘
+
+
+WHAT EACH FILE DOES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 backend/
+│
+├── 🧪 easy_test.py                    ← THE ONLY TEST FILE YOU NEED
+│   │
+│   ├─ YOU edit lines 18-20           (simulation, level, calibre)
+│   ├─ Creates initial state          (with your values)
+│   ├─ Calls ingestion_node()         (passes state)
+│   └─ Shows results                  (prints output)
+│
+├── 📋 state.py                        ← Defines what "state" looks like
+│   │
+│   └─ TeachingState TypedDict        (structure of all data)
+│
+├── ⚙️  config.py                       ← Configuration settings
+│   │
+│   ├─ SIMULATION_CONTROL_MODE        (MANUAL or AUTO)
+│   ├─ SIMULATION_URLS                (maps names to file paths)
+│   └─ Helper functions               (get_simulation_url, etc.)
+│
+└── 📂 nodes/
+    │
+    └── ingestion.py                   ← Backend logic
+        │
+        ├─ simulation_ingest_node()    (validates & enriches state)
+        ├─ simulation_parser_node()    (not implemented yet)
+        └─ concept_extractor_node()    (not implemented yet)
+
+
+DATA FLOW IN DETAIL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1: Input (YOU)
+───────────────────
+Location: easy_test.py (lines 18-20)
+Action: You edit these values
+Data: 
+  - TEST_SIMULATION = "fractions"
+  - TEST_LEVEL = "Beginner"  
+  - TEST_CALIBRE = "Medium"
+
+
+Step 2: State Creation (TEST FILE)
+──────────────────────────────────
+Location: easy_test.py (lines 38-53)
+Action: Test file creates state dictionary
+Data:
+  state = {
+    "simulation_name": "fractions",      ← From your TEST_SIMULATION
+    "learner_profile": {
+      "level": "Beginner",               ← From your TEST_LEVEL
+      "calibre": "Medium"                ← From your TEST_CALIBRE
+    },
+    "simulation_url": "",                ← Empty (will be filled)
+    "control_mode": "MANUAL",            ← Empty (will be filled)
+    "concepts": [],                      ← Empty (will be filled)
+    # ... many other empty fields
+  }
+
+
+Step 3: Node Execution (BACKEND)
+─────────────────────────────────
+Location: nodes/ingestion.py
+Action: simulation_ingest_node() processes state
+Process:
+
+  3a. Read inputs from state
+      sim_name = state.get("simulation_name")  → "fractions"
+      learner = state.get("learner_profile")   → {level: "Beginner", ...}
+  
+  3b. Validate inputs
+      if not sim_name: raise error  → ✓ OK, has value
+      if not learner: raise error   → ✓ OK, has value
+  
+  3c. Fetch simulation URL
+      url = config.get_simulation_url("fractions")
+      → "../SimulationsNCERT-main/.../fractions.html"
+  
+  3d. Determine control mode
+      mode = config.SIMULATION_CONTROL_MODE  → "MANUAL"
+      mode_config = config.get_current_mode_config()
+      → {can_modify_params: False, requires_instructions: True, ...}
+  
+  3e. Create view_config
+      view_config = {
+        "mode": "MANUAL",
+        "url": "../SimulationsNCERT-main/.../fractions.html",
+        "can_modify_params": False,
+        "current_params": {}
+      }
+  
+  3f. Return updated fields
+      return {
+        "simulation_name": "fractions",
+        "simulation_url": "../SimulationsNCERT-main/.../fractions.html",
+        "control_mode": "MANUAL",
+        "view_config": {...},
+        "concepts": [],
+        "current_concept_index": 0,
+        # ... more fields
+      }
+
+
+Step 4: Display Results (TEST FILE)
+───────────────────────────────────
+Location: easy_test.py (lines 58-63)
+Action: Print the results
+Output:
+  ✅ Ingestion Complete!
+     • Loaded simulation: fractions
+     • URL: ../SimulationsNCERT-main/.../fractions.html
+     • Control mode: MANUAL
+     • Can agent modify params: False
+
+
+KEY CONCEPTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. INPUT vs VALIDATION
+   ─────────────────────
+   INPUT:      Test file collects your values (lines 18-20)
+   VALIDATION: Backend checks if values are valid (ingestion.py)
+   
+   Test file = Simulates what Streamlit UI will do in Phase 5
+   Backend = Pure logic, doesn't know where inputs came from
+
+
+2. STATE = All Data
+   ────────────────
+   State is a big dictionary with ALL information needed for teaching
+   
+   Initial state:  Mostly empty, just has simulation name & learner profile
+   After ingestion: Has URL, control mode, view_config filled in
+   After parsing:  Has parameters filled in
+   After concepts: Has concepts list filled in
+   ... and so on
+
+
+3. NODES = Processing Steps
+   ─────────────────────────
+   Each node:
+   - Receives state (with some fields filled)
+   - Does ONE specific job
+   - Returns updated fields
+   - State gets merged with updates
+   
+   Think of it like an assembly line:
+   State → Node1 → State' → Node2 → State'' → ...
+
+
+4. TEST FILE = User Simulator
+   ───────────────────────────
+   Right now:     You manually edit values
+   Phase 5:       Streamlit UI collects values from user clicks
+   But backend:   Doesn't change! Same validation logic
+
+
+HOW TO USE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Want to test a different student?
+   → Edit easy_test.py lines 18-20
+   → Run: python easy_test.py
+
+2. Want to test different control mode?
+   → Edit config.py line 11 (SIMULATION_CONTROL_MODE)
+   → Run: python easy_test.py
+
+3. Want to see available simulations?
+   → Look at config.py SIMULATION_URLS dictionary
+   → Or look at easy_test.py comments (lines 24-30)
+
+4. Confused about what a field means?
+   → Look at state.py for all field definitions
+
+
+SIMPLE MENTAL MODEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Think of it like ordering food:
+
+YOU (Customer):        Edit easy_test.py with your order
+                       ↓
+MENU:                  config.py has available items
+                       ↓
+ORDER FORM:            state.py defines what info is needed
+                       ↓
+WAITER:                easy_test.py takes your order
+                       ↓
+KITCHEN:               ingestion_node() validates order
+                       ↓
+RESULT:                You get confirmation of your order
+
+The kitchen (backend) doesn't care if order came from a waiter (test)
+or from a tablet (Streamlit UI). It just validates and processes!
+
+
+═══════════════════════════════════════════════════════════════════════════
+                              SUMMARY
+═══════════════════════════════════════════════════════════════════════════
+
+FILES YOU INTERACT WITH:
+  • easy_test.py    → Edit lines 18-20, then run it
+  • config.py       → Change control mode (optional)
+
+FILES YOU DON'T EDIT:
+  • state.py        → Just defines structure
+  • ingestion.py    → Backend logic (already done)
+
+THAT'S IT! Keep it simple. One test file, three values to edit.

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed-Distance-Time Simulator</title>
+<style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+    .container { display: flex; height: 100vh; }
+    .simulator { flex: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white; }
+    .track { width: 90%; height: 100px; background: #ddd; border-radius: 10px; position: relative; overflow: hidden; margin-bottom: 20px; }
+    .object { width: 50px; height: 50px; background: red; border-radius: 50%; position: absolute; top: 25px; left: 0; }
+    .controls { display: flex; flex-direction: column; gap: 10px; width: 80%; }
+    .controls label { font-size: 14px; font-weight: bold; }
+    .controls input { width: 100%; }
+    .formula { margin-top: 20px; font-size: 16px; }
+    .sidebar { flex: 1; background: #fafafa; padding: 15px; border-left: 1px solid #ccc; display: flex; flex-direction: column; }
+    .chatbot { flex: 1; border: 1px solid #ccc; border-radius: 8px; padding: 10px; background: #fff; overflow-y: auto; }
+    .chat-input { display: flex; margin-top: 10px; }
+    .chat-input input { flex: 1; padding: 8px; }
+    .chat-input button { padding: 8px 12px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Simulator Section -->
+    <div class="simulator">
+        <h2>Speed-Distance-Time Simulator</h2>
+        <div class="track">
+            <div class="object" id="object"></div>
+        </div>
+        <div class="controls">
+            <label>Speed (m/s): <span id="speedValue">5</span></label>
+            <input type="range" id="speed" min="1" max="20" value="5">
+            
+            <label>Distance (m): <span id="distanceValue">100</span></label>
+            <input type="range" id="distance" min="50" max="500" value="100">
+
+            <div>
+                <button onclick="startSimulation()">Start</button>
+                <button onclick="stopSimulation()">Stop</button>
+                <button onclick="resetSimulation()">Reset</button>
+            </div>
+        </div>
+        <div class="formula" id="formula">
+            Speed = Distance / Time | <b id="formulaValues">5 = 100 / 20</b>
+        </div>
+    </div>
+
+    <!-- Chatbot Sidebar -->
+    <div class="sidebar">
+        <h3>Teacher Chatbot</h3>
+        <div class="chatbot" id="chatbot">
+            <p><b>Bot:</b> Hi! I can help you understand Speed, Distance, and Time. Adjust values and ask me questions!</p>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="Ask me something...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let object = document.getElementById('object');
+let speedSlider = document.getElementById('speed');
+let distanceSlider = document.getElementById('distance');
+let speedValue = document.getElementById('speedValue');
+let distanceValue = document.getElementById('distanceValue');
+let formulaValues = document.getElementById('formulaValues');
+
+let speed = parseInt(speedSlider.value);
+let distance = parseInt(distanceSlider.value);
+let time = distance / speed;
+
+let animation;
+let position = 0;
+
+speedSlider.oninput = function() {
+    speed = parseInt(this.value);
+    speedValue.textContent = speed;
+    updateFormula();
+};
+
+distanceSlider.oninput = function() {
+    distance = parseInt(this.value);
+    distanceValue.textContent = distance;
+    updateFormula();
+};
+
+function updateFormula() {
+    time = (distance / speed).toFixed(2);
+    formulaValues.textContent = `${speed} = ${distance} / ${time}`;
+}
+
+function startSimulation() {
+    let trackWidth = document.querySelector('.track').offsetWidth - 50;
+    let pixelsPerMeter = trackWidth / distance;
+    position = 0;
+    clearInterval(animation);
+    animation = setInterval(() => {
+        position += pixelsPerMeter * speed / 10;
+        if (position >= trackWidth) {
+            position = trackWidth;
+            clearInterval(animation);
+        }
+        object.style.left = position + 'px';
+    }, 100);
+}
+
+function stopSimulation() {
+    clearInterval(animation);
+}
+
+function resetSimulation() {
+    clearInterval(animation);
+    position = 0;
+    object.style.left = '0px';
+}
+
+function sendMessage() {
+    let input = document.getElementById('userInput').value.trim();
+    if (!input) return;
+    let chatbot = document.getElementById('chatbot');
+    chatbot.innerHTML += `<p><b>You:</b> ${input}</p>`;
+    chatbot.innerHTML += `<p><b>Bot:</b> (Placeholder) I'll explain this soon!</p>`;
+    document.getElementById('userInput').value = '';
+    chatbot.scrollTop = chatbot.scrollHeight;
+}
+
+updateFormula();
+</script>
+
+</body>
+</html>

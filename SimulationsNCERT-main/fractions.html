@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pizza Fraction Simulator</title>
+  <style>
+    :root{ --bg:#f7fafc; --card:#ffffff; --accent:#f59e0b; --muted:#6b7280; }
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#111827}
+    .container{max-width:980px;margin:32px auto;padding:20px}
+    .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 6px 20px rgba(2,6,23,0.06)}
+    h1{margin:0 0 8px;font-size:20px}
+    p.lead{margin:0 0 16px;color:var(--muted)}
+    .layout{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
+    .controls{display:flex;flex-direction:column;gap:12px}
+
+    label{font-size:13px;color:var(--muted)}
+    .row{display:flex;gap:8px;align-items:center}
+    input[type=range]{width:100%}
+    .value{min-width:48px;text-align:center;font-weight:600}
+
+    .viz{display:flex;flex-direction:column;gap:12px;align-items:center}
+    canvas{background:linear-gradient(180deg,#fff 0%, #fff 100%);border-radius:12px}
+
+    .info{display:flex;gap:12px;flex-wrap:wrap}
+    .pill{background:#f3f4f6;padding:8px 12px;border-radius:999px;color:#111827;font-weight:600}
+
+    .footer{margin-top:12px;color:var(--muted);font-size:13px}
+
+    .controls .hint{font-size:13px;color:#374151}
+
+    @media (max-width:860px){.layout{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Pizza Fraction Simulator</h1>
+      <p class="lead">Divide the pizza into equal slices, choose how many slices you take, and see the fraction, simplified fraction, decimal and percentage instantly.</p>
+
+      <div class="layout">
+        <div class="controls">
+          <div>
+            <label for="denom">Denominator — Number of equal slices</label>
+            <div class="row"><input id="denom" type="range" min="1" max="12" value="8" step="1"><div class="value" id="denomVal">8</div></div>
+          </div>
+
+          <div>
+            <label for="num">Numerator — How many slices you take</label>
+            <div class="row"><input id="num" type="range" min="0" max="8" value="3" step="1"><div class="value" id="numVal">3</div></div>
+          </div>
+
+          <div class="hint">Try changing the denominator to smaller or larger values. Notice how the size of each slice changes but the fraction concept stays the same.</div>
+
+          <div class="info">
+            <div class="pill">Fraction: <span id="fractionText">3/8</span></div>
+            <div class="pill">Simplified: <span id="simplified">3/8</span></div>
+            <div class="pill">Decimal: <span id="decimal">0.375</span></div>
+            <div class="pill">Percent: <span id="percent">37.5%</span></div>
+          </div>
+
+          <div class="footer">Tip: If you want to play with larger denominators, change the max on the denominator slider in the code (max up to 36 for clarity).</div>
+        </div>
+
+        <div class="viz">
+          <canvas id="pizza" width="520" height="520"></canvas>
+          <div style="display:flex;gap:12px;align-items:center">
+            <button id="takeOne">Take 1 slice</button>
+            <button id="giveOne">Give back 1 slice</button>
+            <button id="randomize">Randomize</button>
+            <button id="reset">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('pizza');
+    const ctx = canvas.getContext('2d');
+    const denom = document.getElementById('denom');
+    const num = document.getElementById('num');
+    const denomVal = document.getElementById('denomVal');
+    const numVal = document.getElementById('numVal');
+    const fractionText = document.getElementById('fractionText');
+    const simplified = document.getElementById('simplified');
+    const decimal = document.getElementById('decimal');
+    const percent = document.getElementById('percent');
+    const takeOne = document.getElementById('takeOne');
+    const giveOne = document.getElementById('giveOne');
+    const randomize = document.getElementById('randomize');
+    const reset = document.getElementById('reset');
+
+    // Utility: Greatest Common Divisor
+    function gcd(a,b){ a = Math.abs(a); b = Math.abs(b); while(b){ let t = a % b; a = b; b = t; } return a }
+
+    function simplify(n,d){ if(d===0) return '—'; let g = gcd(n,d); return (n/g) + '/' + (d/g) }
+
+    function drawPizza(numerator, denominator){
+      const w = canvas.width; const h = canvas.height; const cx = w/2; const cy = h/2; const r = Math.min(w,h)/2 - 12;
+      ctx.clearRect(0,0,w,h);
+
+      // Draw plate shadow
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx,cy,r+8,0,Math.PI*2); ctx.fillStyle = '#fff7ed'; ctx.fill(); ctx.restore();
+
+      const twoPi = Math.PI*2;
+      for(let i=0;i<denominator;i++){
+        const start = (i/denominator)*twoPi - Math.PI/2;
+        const end = ((i+1)/denominator)*twoPi - Math.PI/2;
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,r,start,end);
+        ctx.closePath();
+        // color taken slices differently
+        if(i < numerator){
+          // pizza topping gradient
+          const grad = ctx.createLinearGradient(cx + Math.cos((start+end)/2)*r/2, cy + Math.sin((start+end)/2)*r/2, cx, cy);
+          grad.addColorStop(0, '#fbbf24'); // base
+          grad.addColorStop(0.6, '#f97316');
+          ctx.fillStyle = grad;
+        } else {
+          ctx.fillStyle = '#fde68a';
+        }
+        ctx.fill();
+
+        // slice border
+        ctx.strokeStyle = '#a16207'; ctx.lineWidth = 1; ctx.stroke();
+
+        // pepperoni dots on taken slices
+        if(i < numerator){
+          const dotCount = Math.max(2, Math.floor(r/28));
+          for(let d=0; d<dotCount; d++){
+            const ang = start + (d+1)/(dotCount+1)*(end-start);
+            const px = cx + Math.cos(ang) * r * 0.55;
+            const py = cy + Math.sin(ang) * r * 0.55;
+            ctx.beginPath(); ctx.arc(px,py,Math.max(4,r/40),0,Math.PI*2); ctx.fillStyle = '#7f1d1d'; ctx.fill();
+          }
+        }
+      }
+
+      // circle center
+      ctx.beginPath(); ctx.arc(cx,cy,r*0.22,0,Math.PI*2); ctx.fillStyle = '#fff7ed'; ctx.fill();
+
+      // draw fraction label in center
+      ctx.fillStyle = '#412f17'; ctx.font = '700 28px Inter, system-ui'; ctx.textAlign = 'center';
+      ctx.fillText(`${numerator}/${denominator}`, cx, cy+10);
+    }
+
+    function updateUI(){
+      const d = parseInt(denom.value,10);
+      // adjust numerator max
+      num.max = d;
+      denomVal.textContent = d;
+
+      let n = parseInt(num.value,10);
+      // clamp numerator
+      if(n > d) { n = d; num.value = n }
+      numVal.textContent = n;
+
+      // update fraction text
+      fractionText.textContent = `${n}/${d}`;
+      simplified.textContent = simplify(n,d);
+      const dec = d === 0 ? 0 : (n/d);
+      decimal.textContent = dec.toFixed(4).replace(/\.0+$/,'');
+      percent.textContent = (dec*100).toFixed(2) + '%';
+
+      drawPizza(n,d);
+    }
+
+    // initial draw
+    updateUI();
+
+    denom.addEventListener('input', ()=>{
+      // if denominator changed, ensure numerator slider max updates and clamp value
+      const d = parseInt(denom.value,10);
+      if(parseInt(num.value,10) > d) num.value = d;
+      updateUI();
+    });
+
+    num.addEventListener('input', ()=>{ updateUI(); });
+
+    takeOne.addEventListener('click', ()=>{ let v = parseInt(num.value,10); if(v < parseInt(denom.value,10)) num.value = v+1; updateUI(); });
+    giveOne.addEventListener('click', ()=>{ let v = parseInt(num.value,10); if(v > 0) num.value = v-1; updateUI(); });
+    randomize.addEventListener('click', ()=>{ const d = parseInt(denom.value,10); num.value = Math.floor(Math.random()*(d+1)); updateUI(); });
+    reset.addEventListener('click', ()=>{ denom.value = 8; num.value = 3; updateUI(); });
+
+    // click on canvas to toggle slice selection
+    canvas.addEventListener('click', (ev)=>{
+      const rect = canvas.getBoundingClientRect();
+      const x = ev.clientX - rect.left; const y = ev.clientY - rect.top;
+      const cx = canvas.width/2; const cy = canvas.height/2;
+      const dx = x-cx; const dy = y-cy; const r = Math.min(canvas.width, canvas.height)/2 - 12;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      if(dist > r) return; // outside
+
+      let angle = Math.atan2(dy,dx) + Math.PI/2; if(angle < 0) angle += Math.PI*2;
+      const which = Math.floor(angle / (Math.PI*2) * parseInt(denom.value,10));
+      // clicking a slice will toggle it if it's last taken or extend/reduce the numerator accordingly
+      const currentN = parseInt(num.value,10);
+      if(which < currentN){ // clicked on a taken slice -> reduce to which
+        num.value = which; updateUI();
+      } else { // clicked on an untaken slice -> increase to which+1
+        num.value = which+1; updateUI();
+      }
+    });
+
+    // make canvas responsive on high-DPI
+    function fixDPI(){
+      const ratio = window.devicePixelRatio || 1;
+      const w = canvas.clientWidth || canvas.width;
+      const h = canvas.clientHeight || canvas.height;
+      canvas.width = w * ratio; canvas.height = h * ratio;
+      canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+      ctx.setTransform(ratio,0,0,ratio,0,0);
+      updateUI();
+    }
+
+    // set initial client size
+    (function(){
+      // set canvas displayed size relative to container
+      const target = 520; // default pixel size
+      canvas.style.width = target + 'px'; canvas.style.height = target + 'px';
+      fixDPI();
+    })();
+
+    window.addEventListener('resize', () => { fixDPI(); });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

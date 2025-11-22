@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCERT Simulations - Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+        .simulations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-top: 30px;
+        }
+        .sim-card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .sim-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+        }
+        .sim-icon {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .sim-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .sim-description {
+            color: #718096;
+            font-size: 0.95rem;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .sim-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #e6fffa;
+            color: #047857;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-align: center;
+            margin-top: auto;
+        }
+        .chemistry { border-top: 4px solid #f59e0b; }
+        .math { border-top: 4px solid #3b82f6; }
+        .physics { border-top: 4px solid #8b5cf6; }
+        
+        .footer {
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            margin-top: 50px;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .simulations-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 NCERT Interactive Simulations</h1>
+        <p class="subtitle">Explore interactive educational simulations for better understanding</p>
+        
+        <div class="simulations-grid">
+            <!-- Acids & Bases Simulation -->
+            <a href="acids bases.html" class="sim-card chemistry">
+                <div class="sim-icon">⚗️</div>
+                <div class="sim-title">pH Lab - Acids & Bases</div>
+                <div class="sim-description">
+                    Explore pH levels, test acids and bases, perform neutralization reactions, and observe litmus paper color changes.
+                </div>
+                <div class="sim-badge">Chemistry</div>
+            </a>
+            
+            <!-- Fractions Simulation -->
+            <a href="fractions.html" class="sim-card math">
+                <div class="sim-icon">🍕</div>
+                <div class="sim-title">Pizza Fractions</div>
+                <div class="sim-description">
+                    Learn fractions by dividing pizza! Visualize numerator/denominator, see simplified fractions, decimals, and percentages.
+                </div>
+                <div class="sim-badge">Mathematics</div>
+            </a>
+            
+            <!-- Speed-Distance-Time -->
+            <a href="std.html" class="sim-card physics">
+                <div class="sim-icon">🏎️</div>
+                <div class="sim-title">Speed-Distance-Time</div>
+                <div class="sim-description">
+                    Understand the relationship between speed, distance, and time with animated object movement and interactive controls.
+                </div>
+                <div class="sim-badge">Physics</div>
+            </a>
+            
+            <!-- STD1 -->
+            <a href="std1.html" class="sim-card physics">
+                <div class="sim-icon">🚗</div>
+                <div class="sim-title">Motion Simulator 1</div>
+                <div class="sim-description">
+                    Advanced motion physics simulation with real-time calculations and visualizations.
+                </div>
+                <div class="sim-badge">Physics</div>
+            </a>
+            
+            <!-- STD2 -->
+            <a href="std2.html" class="sim-card physics">
+                <div class="sim-icon">🚀</div>
+                <div class="sim-title">Motion Simulator 2</div>
+                <div class="sim-description">
+                    Interactive physics simulation exploring motion concepts with dynamic visualizations.
+                </div>
+                <div class="sim-badge">Physics</div>
+            </a>
+            
+            <!-- STD3 -->
+            <a href="std3.html" class="sim-card physics">
+                <div class="sim-icon">🎯</div>
+                <div class="sim-title">Motion Simulator 3</div>
+                <div class="sim-description">
+                    Comprehensive motion analysis with interactive parameters and real-time feedback.
+                </div>
+                <div class="sim-badge">Physics</div>
+            </a>
+            
+            <!-- STD4 -->
+            <a href="std4.html" class="sim-card physics">
+                <div class="sim-icon">⚡</div>
+                <div class="sim-title">Motion Simulator 4</div>
+                <div class="sim-description">
+                    Advanced kinematics simulation with detailed calculations and visual representations.
+                </div>
+                <div class="sim-badge">Physics</div>
+            </a>
+        </div>
+        
+        <div class="footer">
+            <p>📚 NCERT Educational Simulations Project</p>
+            <p>Interactive learning tools for better conceptual understanding</p>
+        </div>
+    </div>
+</body>
+</html>

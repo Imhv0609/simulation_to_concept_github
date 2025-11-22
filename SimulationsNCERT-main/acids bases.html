@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>pH Lab — Explorer & Neutralization</title>
+<style>
+  :root{
+    --bg:#fbfdff; --card:#fff; --accent:#0b74da; --muted:#556;
+    --good:#1f9d55; --warn:#f6a623; --bad:#d64545;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#0b1220}
+  header{background:linear-gradient(90deg,var(--accent),#2aa0f3); color:white;padding:14px 18px}
+  header h1{margin:0;font-size:18px}
+  .app{display:flex;gap:12px;padding:14px;align-items:flex-start}
+  .left{flex:2; display:flex;flex-direction:column;gap:12px}
+  .right{width:320px}
+  .card{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 1px 6px rgba(20,30,60,0.04)}
+  .row{display:flex;gap:8px;align-items:center}
+  .muted{color:var(--muted);font-size:13px}
+  .track{height:260px;border-radius:8px;background:linear-gradient(#f8faff,#eef6ff);display:flex;align-items:center;justify-content:center}
+  .beaker-wrap{position:relative;width:260px;height:220px}
+  .beaker{
+    position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+    width:160px;height:170px;border-radius:0 0 12px 12px; border:8px solid #cfe8ff; border-top:60px solid transparent;
+    box-shadow: inset 0 12px 20px rgba(0,0,0,0.06);
+    overflow:hidden; display:flex; align-items:flex-end; justify-content:center;
+  }
+  .liquid{
+    width:100%; transition:background 300ms linear; display:flex; align-items:flex-end; justify-content:center;
+    position:relative; height:60%; bottom:0;
+  }
+  .beaker-mouth{position:absolute; top:-48px; left:50%; transform:translateX(-50%); width:220px; height:80px; border-radius:8px; border:6px solid transparent}
+  .litmus{display:flex;gap:8px;align-items:center}
+  .litmus .paper{width:16px;height:40px;border-radius:4px; border:1px solid rgba(0,0,0,0.06)}
+  .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:8px}
+  .btn{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer}
+  .btn.secondary{background:#fff;border:1px solid #cfe6ff;color:var(--accent)}
+  select,input[type=number]{padding:8px;border-radius:6px;border:1px solid #e6eefc}
+  .ion-cloud{position:absolute; top:6px; left:50%; transform:translateX(-50%); width:180px; height:120px; pointer-events:none}
+  .ion{position:absolute;border-radius:50%;width:10px;height:10px;display:flex;align-items:center;justify-content:center;font-size:9px;color:white}
+  .toast{position:fixed;right:20px;bottom:20px;background:#fff;padding:12px;border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:none}
+  .presets{display:flex;gap:8px;flex-wrap:wrap}
+  .preset{padding:6px 8px;border-radius:8px;border:1px solid #e6eefc;background:#fbfeff;cursor:pointer;font-size:13px}
+  .legend{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .ph-scale{height:18px;border-radius:6px; background:linear-gradient(to right,#7b0023,#ff3b30,#ff8a00,#ffd400,#9bd400,#43d27b,#20b2aa,#2aa0f3,#5a4bdc); flex:1}
+  .ph-labels{display:flex;justify-content:space-between;font-size:12px;margin-top:6px}
+  small{color:var(--muted)}
+  .explain{margin-top:8px;font-size:14px}
+  @media (max-width:900px){ .app{flex-direction:column} .right{width:100%} }
+</style>
+</head>
+<body>
+<header><h1>pH Lab — Explorer & Neutralization</h1></header>
+
+<div class="app">
+  <div class="left">
+    <div class="card">
+      <h3>pH Color & Litmus Explorer</h3>
+      <div class="track">
+        <div class="beaker-wrap">
+          <div class="beaker" id="beaker">
+            <div class="liquid" id="liquid" style="height:55%">
+              <!-- ion cloud sits above liquid -->
+            </div>
+            <div class="ion-cloud" id="ionCloud"></div>
+          </div>
+          <div class="beaker-mouth"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div>
+          <label>pH slider: <span id="pHdisplay">7.00</span></label>
+          <input id="phSlider" type="range" min="0" max="14" step="0.01" value="7">
+        </div>
+        <div>
+          <label>Volume in beaker (mL)</label>
+          <input id="beakerVolume" type="number" min="10" step="1" value="100">
+        </div>
+        <div>
+          <label>Preset substances</label>
+          <div class="presets" id="presets">
+            <!-- filled by JS -->
+          </div>
+        </div>
+        <div>
+          <label>Litmus test</label>
+          <div class="litmus">
+            <div>
+              <div class="paper" id="litmusRed" style="background:#ff4d4d"></div>
+              <small>Red litmus</small>
+            </div>
+            <div>
+              <div class="paper" id="litmusBlue" style="background:#4da6ff"></div>
+              <small>Blue litmus</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="ph-scale" id="phScale"></div>
+      </div>
+      <div class="ph-labels">
+        <span>0</span><span>2</span><span>4</span><span>7 Neutral</span><span>10</span><span>12</span><span>14</span>
+      </div>
+
+      <div style="margin-top:10px" class="explain">
+        <b>Note:</b> pH measures hydrogen ion concentration. Lower pH = more acidic (more H⁺). Higher pH = more basic (more OH⁻). Use the slider or presets to explore.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Neutralization Lab — add drops to mix</h3>
+
+      <div class="controls">
+        <div>
+          <label>Add: <select id="addType"><option value="acid">Strong Acid (HCl)</option><option value="base">Strong Base (NaOH)</option></select></label>
+        </div>
+        <div>
+          <label>Concentration (M)</label>
+          <input id="addConc" type="number" min="0.01" step="0.01" value="0.1">
+        </div>
+        <div>
+          <label>Drop volume (mL)</label>
+          <input id="dropVol" type="number" min="0.1" step="0.1" value="0.05">
+        </div>
+        <div>
+          <label>Action</label>
+          <div class="row">
+            <button class="btn" id="addDrop">Add drop</button>
+            <button class="btn secondary" id="resetLab">Reset</button>
+            <button class="btn secondary" id="fillPreset">Pour preset</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px" class="row">
+        <div><small>Current pH:</small><div><b id="lab_pH">7.00</b></div></div>
+        <div style="margin-left:10px"><small>Volume:</small><div><b id="lab_vol">100 mL</b></div></div>
+        <div style="margin-left:10px"><small>Net moles H⁺:</small><div><b id="lab_H">0.000</b></div></div>
+      </div>
+
+      <div style="margin-top:10px" class="explain" id="labExplain">Start neutralization by adding acid or base drops. We track moles of H⁺ and OH⁻ to compute pH.</div>
+
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="card">
+      <h3>Substance presets</h3>
+      <div class="muted">Tap a preset to instantly pour that substance into the beaker.</div>
+      <ul id="presetsList" class="muted">
+        <!-- filled by JS -->
+      </ul>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3>Ion View & Intuition</h3>
+      <div class="muted">Particle cloud shows relative H⁺ (red) or OH⁻ (blue) ion counts — bigger cloud = more ions.</div>
+      <div style="margin-top:8px"><small>Interpretation:</small>
+        <ul class="muted">
+          <li>Many red ions → strong acid</li>
+          <li>Many blue ions → strong base</li>
+          <li>Balanced/none → neutral</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3>Aha! moments</h3>
+      <div id="ahaList" class="muted">No special events yet. Try neutralizing toward pH 7 or creating a strong acid/base.</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastBox"></div>
+
+<script>
+/* ---------- Model & helpers ---------- */
+// conversion helpers
+const toFixed = (v,n=3)=> parseFloat(v).toFixed(n)
+const clamp = (v,mn,mx)=> Math.max(mn, Math.min(mx, v))
+
+// physical model:
+// track moles of H+ and OH- in beaker (not considering weak acid dissociation/ buffering).
+// Beaker initial: pure water pH 7 => [H+] = 1e-7 M in volume V.
+// total moles_H = [H+]*V_L ; moles_OH = [OH-]*V_L
+// When adding strong acid: moles_H += C_added * V_added(L)
+// When adding strong base: moles_OH += C_added * V_added(L)
+// Net H = moles_H - moles_OH
+// If netH > 0 => [H+] = netH / V_total ; pH = -log10([H+])
+// If netH < 0 => [OH-] = -netH / V_total ; pOH = -log10([OH-]); pH = 14 - pOH
+
+// initial state
+let beaker = {
+  volume_mL: 100,
+  moles_H: 0,   // net H moles present (positive means excess H+, negative means excess OH- represented as negative H)
+  moles_OH: 0,  // we keep separate for clarity, but we'll track net
+  // We'll store actual H_moles_total and OH_moles_total for transparency
+  H_moles_total: 0,
+  OH_moles_total: 0
+};
+
+// helper to compute pH from state
+function compute_pH(){
+  const V_L = beaker.volume_mL / 1000
+  // initial water contribution: pure water at 25°C has [H+]=1e-7, [OH-]=1e-7
+  const baseH = 1e-7 * V_L
+  const baseOH = 1e-7 * V_L
+  const total_H = baseH + beaker.H_moles_total
+  const total_OH = baseOH + beaker.OH_moles_total
+  // net = H - OH
+  const net = total_H - total_OH
+  if(Math.abs(net) < 1e-15){
+    return 7.0
+  } else if(net > 0){
+    const concH = net / V_L
+    const pH = -Math.log10(concH)
+    return clamp(pH, 0, 14)
+  } else {
+    const concOH = Math.abs(net) / V_L
+    const pOH = -Math.log10(concOH)
+    const pH = 14 - pOH
+    return clamp(pH, 0, 14)
+  }
+}
+
+// convert pH to color: map 0->14 to gradient; we'll interpolate manually
+function phToColor(ph){
+  // color stops (approx): 0 red #7b0023, 2 red/orange, 4 orange/yellow, 7 green #9bd400, 10 blue-ish, 14 purple
+  const stops = [
+    {p:0, c:[123,0,35]},
+    {p:2, c:[255,59,48]},
+    {p:4, c:[255,138,0]},
+    {p:7, c:[155,212,0]},
+    {p:10, c:[42,157,244]},
+    {p:14, c:[90,75,220]}
+  ];
+  if(ph <= 0) return `rgb(${stops[0].c.join(',')})`;
+  if(ph >= 14) return `rgb(${stops[stops.length-1].c.join(',')})`;
+  // find segment
+  let a = stops[0], b = stops[stops.length-1];
+  for(let i=0;i<stops.length-1;i++){
+    if(ph >= stops[i].p && ph <= stops[i+1].p){ a = stops[i]; b = stops[i+1]; break;}
+  }
+  const fr = (ph - a.p) / (b.p - a.p)
+  const rgb = [
+    Math.round(a.c[0] + fr * (b.c[0] - a.c[0])),
+    Math.round(a.c[1] + fr * (b.c[1] - a.c[1])),
+    Math.round(a.c[2] + fr * (b.c[2] - a.c[2])),
+  ]
+  return `rgb(${rgb.join(',')})`
+}
+
+/* ---------- UI wiring ---------- */
+const phSlider = document.getElementById('phSlider'), pHdisplay = document.getElementById('pHdisplay'), liquid = document.getElementById('liquid'), beakerVolume = document.getElementById('beakerVolume')
+const litmusRed = document.getElementById('litmusRed'), litmusBlue = document.getElementById('litmusBlue'), ionCloud = document.getElementById('ionCloud')
+const presetsEl = document.getElementById('presets'), presetsList = document.getElementById('presetsList')
+const addDropBtn = document.getElementById('addDrop'), addType = document.getElementById('addType'), addConc = document.getElementById('addConc'), dropVol = document.getElementById('dropVol')
+const lab_pH = document.getElementById('lab_pH'), lab_vol = document.getElementById('lab_vol'), lab_H = document.getElementById('lab_H'), labExplain = document.getElementById('labExplain')
+const toastBox = document.getElementById('toastBox'), ahaList = document.getElementById('ahaList'), fillPresetBtn = document.getElementById('fillPreset'), resetLabBtn = document.getElementById('resetLab')
+
+const presetData = [
+  {name:'Distilled water', pH:7.0, note:'Pure water', concH:1e-7},
+  {name:'Vinegar (acetic)', pH:2.9, note:'Common vinegar', concH: Math.pow(10,-2.9)},
+  {name:'Lemon juice', pH:2.0, note:'Lemon', concH: Math.pow(10,-2.0)},
+  {name:'Black coffee', pH:5.0, note:'Coffee', concH: Math.pow(10,-5.0)},
+  {name:'Milk', pH:6.5, note:'Milk', concH: Math.pow(10,-6.5)},
+  {name:'Baking soda (dilute)', pH:8.4, note:'Slight base', concH: Math.pow(10,-(14-8.4))}, // convert OH to H
+  {name:'Soap (weak base)', pH:9.5, note:'Soap solution', concH: Math.pow(10,-(14-9.5))},
+  {name:'Household bleach', pH:12.5, note:'Bleach', concH: Math.pow(10,-(14-12.5))}
+]
+
+// init presets UI
+function initPresets(){
+  presetsEl.innerHTML = ''
+  presetData.forEach((p,i)=>{
+    const btn = document.createElement('div'); btn.className='preset'; btn.textContent = p.name
+    btn.onclick = ()=>{ pourPreset(i) }
+    presetsEl.appendChild(btn)
+    const li = document.createElement('li'); li.textContent = `${p.name} — approx pH ${p.pH} (${p.note})`
+    presetsList.appendChild(li)
+  })
+}
+initPresets()
+
+// set beaker state from preset
+function pourPreset(idx){
+  const p = presetData[idx]
+  // set beaker volume as current value
+  const V_L = Number(beakerVolume.value)/1000
+  // compute total moles H and OH from pH: [H+] = 10^-pH ; [OH-] = Kw/[H+]
+  const concH = Math.pow(10, -p.pH)
+  const concOH = 1e-14 / concH
+  beaker.volume_mL = Number(beakerVolume.value)
+  beaker.H_moles_total = concH * V_L
+  beaker.OH_moles_total = concOH * V_L
+  updateFromState('Preset: ' + p.name)
+}
+
+// update UI from model
+function updateFromState(reason){
+  // compute pH and update slider & beaker color
+  const ph = compute_pH()
+  pHdisplay.textContent = toFixed(ph,2)
+  phSlider.value = ph
+  // color
+  liquid.style.background = `linear-gradient(to top, ${phToColor(ph)}, rgba(255,255,255,0.02))`
+  // litmus behaviour: red litmus turns blue when solution is basic (pH>8.3), blue litmus turns red when solution acidic (pH<4.5) roughly
+  litmusRed.style.background = (ph > 8.3 ? '#4da6ff' : '#ff4d4d')
+  litmusBlue.style.background = (ph < 4.5 ? '#ff4d4d' : '#4da6ff')
+  // ion visualization: show more H+ or OH- based on net
+  renderIonCloud()
+  // lab summary fields
+  lab_pH.textContent = toFixed(ph,2)
+  lab_vol.textContent = `${beaker.volume_mL} mL`
+  lab_H.textContent = toFixed(beaker.H_moles_total - beaker.OH_moles_total,6)
+  // show aha events
+  checkAha(ph, reason)
+}
+
+// simple ion cloud rendering
+function renderIonCloud(){
+  // clear
+  ionCloud.innerHTML = ''
+  const V_L = beaker.volume_mL / 1000
+  const total_H = (1e-7 * V_L) + beaker.H_moles_total
+  const total_OH = (1e-7 * V_L) + beaker.OH_moles_total
+  const net = total_H - total_OH
+  // scale particle count between 0..30 depending on concentration (log scale)
+  function countForConc(c){
+    // c is conc (mol/L)
+    if(c <= 0) return 0
+    const x = Math.log10(c)
+    // map -14..-1 -> 0..30
+    const v = Math.round(clamp(((x + 14) / 13) * 30, 0, 40))
+    return v
+  }
+  const concH = total_H / V_L
+  const concOH = total_OH / V_L
+  const nH = countForConc(concH)
+  const nOH = countForConc(concOH)
+  const displayCount = Math.max(nH, nOH, 1)
+  // if acidic show red H+ particles, if basic show blue OH- ones, if near neutral mix
+  for(let i=0;i<displayCount;i++){
+    const el = document.createElement('div')
+    el.className = 'ion'
+    const left = Math.random()*160
+    const top = Math.random()*100
+    el.style.left = left + 'px'; el.style.top = top + 'px'
+    if(concH > concOH){
+      el.style.background = 'rgba(220,40,40,0.9)'
+      el.style.transform = `scale(${0.7 + Math.random()*0.8})`
+      el.textContent = 'H+'
+    } else if(concOH > concH){
+      el.style.background = 'rgba(40,120,220,0.9)'
+      el.style.transform = `scale(${0.7 + Math.random()*0.8})`
+      el.textContent = 'OH-'
+    } else {
+      // neutral - small light grey dots
+      el.style.background = 'rgba(160,160,160,0.7)'
+      el.textContent = ''
+    }
+    ionCloud.appendChild(el)
+  }
+}
+
+// pH slider manip
+phSlider.oninput = ()=>{
+  const ph = Number(phSlider.value)
+  // set beaker state to match selected pH (approx): compute total H & OH as per V
+  const V_L = Number(beakerVolume.value)/1000
+  // assume pure solution with that pH: [H]=10^-pH , [OH]=Kw/[H]
+  const concH = Math.pow(10,-ph)
+  const concOH = 1e-14 / concH
+  beaker.volume_mL = Number(beakerVolume.value)
+  beaker.H_moles_total = concH * V_L
+  beaker.OH_moles_total = concOH * V_L
+  updateFromState('slider')
+}
+
+// presets "pour" button to fill beaker with selected preset
+fillPresetBtn.onclick = ()=>{
+  // pour first preset as example
+  pourPreset(0)
+  showToast('Poured preset into beaker')
+}
+
+// neutralization: add a drop
+addDropBtn.onclick = ()=>{
+  const type = addType.value // acid or base
+  const conc = Number(addConc.value) // M
+  const vol_mL = Number(dropVol.value) // mL
+  if(conc <= 0 || vol_mL <= 0){ showToast('Give valid concentration & drop volume','warn'); return }
+  // convert to moles: conc (mol/L) * vol (L)
+  const added_moles = conc * (vol_mL / 1000)
+  if(type === 'acid'){
+    beaker.H_moles_total += added_moles
+  } else {
+    beaker.OH_moles_total += added_moles
+  }
+  beaker.volume_mL = Number(beaker.volume_mL) + vol_mL
+  updateFromState(`add ${type} ${conc}M ${vol_mL}mL`)
+}
+
+// reset lab
+resetLabBtn.onclick = ()=>{
+  beaker = { volume_mL: Number(beakerVolume.value), H_moles_total: 0, OH_moles_total: 0 }
+  // initial water contribution will be computed dynamically
+  updateFromState('reset')
+  showToast('Lab reset')
+}
+
+// update beaker volume from UI
+beakerVolume.oninput = ()=>{
+  beaker.volume_mL = Number(beakerVolume.value)
+  // recompute using current totals
+  updateFromState('vol change')
+}
+
+// show toast
+function showToast(msg, type='ok'){
+  toastBox.style.display = 'block'
+  toastBox.innerHTML = `<b>${msg}</b>`
+  if(type==='warn') toastBox.style.border = '2px solid var(--warn)'
+  else toastBox.style.border = 'none'
+  setTimeout(()=>{ toastBox.style.display = 'none' }, 2200)
+}
+
+// Aha event tracker
+let ahaEvents = []
+function checkAha(ph, reason){
+  // event: crossing neutral pH 7 (neutralized)
+  if(ph >= 6.95 && ph <= 7.05){
+    if(!ahaEvents.includes('neutral')){ ahaEvents.push('neutral'); addAha("You've neutralized the solution! pH ~ 7 — salt + water formed (intuitively).") }
+  }
+  // event: very acidic or very basic
+  if(ph <= 2 && !ahaEvents.includes('strongAcid')){ ahaEvents.push('strongAcid'); addAha("Wow — very acidic solution (pH ≤ 2). Handle with care!") }
+  if(ph >= 12 && !ahaEvents.includes('strongBase')){ ahaEvents.push('strongBase'); addAha("Strongly basic solution (pH ≥ 12). That's very caustic.") }
+  // update aha list UI
+  document.getElementById('ahaList').textContent = ahaEvents.length ? ahaEvents.join(', ') : 'No special events yet.'
+}
+
+// add Aha (toast + list)
+function addAha(text){
+  showToast(text)
+  // also track in list
+  ahaEvents.push(text)
+  document.getElementById('ahaList').textContent = ahaEvents.join(' | ')
+}
+
+/* ---------- Init ---------- */
+window.addEventListener('load', ()=>{
+  // set initial beaker as pure water
+  beaker = { volume_mL: Number(beakerVolume.value), H_moles_total: 0, OH_moles_total: 0 }
+  updateFromState('init')
+})
+</script>
+</body>
+</html>

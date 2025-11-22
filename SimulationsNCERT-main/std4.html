@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Race Story — Learn Speed · Distance · Time</title>
+
+  <!-- Chart.js for small graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --bg:#f6fbff; --card:#fff; --accent:#0b74da; --muted:#556;
+      --good:#1f9d55; --warn:#f6a623; --bad:#d64545;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#0b1220}
+    header{background:linear-gradient(90deg,var(--accent),#2aa0f3); color:white;padding:14px 18px}
+    header h1{margin:0;font-size:18px}
+    .app{display:flex;height:calc(100vh - 56px);gap:12px;padding:14px}
+    .main{flex:3; display:flex; flex-direction:column; gap:12px; overflow:auto}
+    .side{flex:1; min-width:260px}
+    .tabs{display:flex;gap:8px}
+    .tab-btn{padding:9px 12px;border-radius:8px;border:none;background:rgba(0,0,0,0.06);cursor:pointer}
+    .tab-btn.active{background:var(--card);box-shadow:0 6px 18px rgba(11,116,218,0.08); color:var(--accent)}
+    .card{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 1px 6px rgba(20,30,60,0.04)}
+    .track{height:140px;border-radius:10px;background:linear-gradient(90deg,#eee,#ddd);position:relative;overflow:hidden;border:1px solid #e2e8f0}
+    .runner{position:absolute;width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:white;box-shadow:0 6px 14px rgba(20,30,60,0.08)}
+    .runner.riya{background:#ff6b6b;top:18px}
+    .runner.arjun{background:#4f8cff;top:66px}
+    .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    input[type=range]{width:100%}
+    input[type=number]{width:100%;padding:8px;border-radius:6px;border:1px solid #e6eefc}
+    .row{display:flex;gap:8px;align-items:center}
+    .btn{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer}
+    .btn.secondary{background:#fff;border:1px solid #cfe6ff;color:var(--accent)}
+    .muted{color:var(--muted);font-size:13px}
+    .story{min-height:84px}
+    .predict-box{display:flex;gap:8px;align-items:center;margin-top:8px}
+    .feedback{margin-top:8px;font-weight:600}
+    canvas{background:white;border-radius:8px;padding:8px;width:100% !important}
+    .small{font-size:13px;color:var(--muted)}
+    footer{padding:8px;text-align:center;color:var(--muted)}
+    @media (max-width:900px){ .app{flex-direction:column} .side{order:2} .main{order:1} }
+  </style>
+</head>
+<body>
+  <header><h1>Riya vs Arjun — Race Story: Understand Speed, Distance & Time</h1></header>
+
+  <div class="app">
+    <div class="main">
+      <!-- Tabs -->
+      <div class="card">
+        <div class="tabs">
+          <button class="tab-btn active" id="tabDistance">Distance Mode</button>
+          <button class="tab-btn" id="tabSpeed">Speed Mode</button>
+          <button class="tab-btn" id="tabFormula">Formula Puzzle</button>
+        </div>
+      </div>
+
+      <!-- Distance Mode -->
+      <div class="card" id="panelDistance">
+        <h2>Distance Discovery — who travels farther in the same time?</h2>
+        <p class="small">Story: Riya and Arjun start together. You control speeds — who covers more distance in 10 seconds?</p>
+
+        <div class="track" id="trackD">
+          <div class="runner riya" id="riyaD" style="left:8px">R</div>
+          <div class="runner arjun" id="arjunD" style="left:8px">A</div>
+        </div>
+
+        <div class="controls">
+          <div>
+            <label>Riya's speed (m/s): <span id="spdR_D">5</span></label>
+            <input type="range" id="spdR_D_range" min="0.5" max="15" step="0.1" value="5">
+          </div>
+          <div>
+            <label>Arjun's speed (m/s): <span id="spdA_D">7</span></label>
+            <input type="range" id="spdA_D_range" min="0.5" max="15" step="0.1" value="7">
+          </div>
+          <div>
+            <label>Observe time window (s): <span id="timeWindow_D">10</span></label>
+            <input type="range" id="timeWindow_D_range" min="2" max="30" step="1" value="10">
+          </div>
+          <div>
+            <label>Prediction: Who travels farther in the window?</label>
+            <div class="row">
+              <select id="predictWho_D" style="padding:8px;border-radius:6px;border:1px solid #e6eefc">
+                <option value="Riya">Riya</option>
+                <option value="Arjun">Arjun</option>
+                <option value="Tie">Tie</option>
+              </select>
+              <button class="btn" id="checkPred_D">Check</button>
+              <button class="btn secondary" id="resetD">Reset</button>
+            </div>
+            <div id="feedbackD" class="feedback muted"></div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;align-items:center">
+          <div class="small">Riya distance: <span id="distR_D">0</span> m</div>
+          <div class="small">Arjun distance: <span id="distA_D">0</span> m</div>
+          <div style="flex:1"></div>
+          <button class="btn" id="runD">Simulate</button>
+        </div>
+
+        <div style="margin-top:12px" class="card">
+          <h4 style="margin:6px 0">Distance vs Time (preview)</h4>
+          <canvas id="chartD" height="110"></canvas>
+        </div>
+      </div>
+
+      <!-- Speed Mode -->
+      <div class="card" id="panelSpeed" style="display:none">
+        <h2>Speed Challenge — same distance, who wins?</h2>
+        <p class="small">Story: They race same distance. You can change the distance and one runner's speed — find the minimum speed to beat the other.</p>
+
+        <div class="track" id="trackS">
+          <div class="runner riya" id="riyaS" style="left:8px">R</div>
+          <div class="runner arjun" id="arjunS" style="left:8px">A</div>
+        </div>
+
+        <div class="controls">
+          <div>
+            <label>Race distance (m): <span id="raceDist_S">150</span></label>
+            <input type="range" id="raceDist_S_range" min="30" max="600" step="5" value="150">
+          </div>
+          <div>
+            <label>Riya's speed (m/s): <span id="spdR_S">6</span></label>
+            <input type="range" id="spdR_S_range" min="0.5" max="20" step="0.1" value="6">
+          </div>
+          <div>
+            <label>Arjun's speed (m/s): <span id="spdA_S">6</span></label>
+            <input type="range" id="spdA_S_range" min="0.5" max="20" step="0.1" value="6">
+          </div>
+          <div>
+            <label>Prediction: What is the minimum speed Riya needs to beat Arjun?</label>
+            <div class="row">
+              <input type="number" id="predictSpeed_S" placeholder="enter speed in m/s" />
+              <button class="btn" id="checkPred_S">Check</button>
+              <button class="btn secondary" id="resetS">Reset</button>
+            </div>
+            <div id="feedbackS" class="feedback muted"></div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;align-items:center">
+          <div class="small">Time Riya: <span id="timeR_S">0</span> s</div>
+          <div class="small">Time Arjun: <span id="timeA_S">0</span> s</div>
+          <div style="flex:1"></div>
+          <button class="btn" id="runS">Simulate Race</button>
+        </div>
+
+        <div style="margin-top:12px" class="card">
+          <h4 style="margin:6px 0">Distance vs Time (race)</h4>
+          <canvas id="chartS" height="110"></canvas>
+        </div>
+      </div>
+
+      <!-- Formula Puzzle -->
+      <div class="card" id="panelFormula" style="display:none">
+        <h2>Formula Puzzle — find the missing variable</h2>
+        <p class="small">Story: Arjun needs to know how fast to run to reach a checkpoint on time. Fill two values and solve the third (Speed = Distance ÷ Time).</p>
+
+        <div class="controls">
+          <div>
+            <label>Hide variable</label>
+            <select id="hideVarF">
+              <option value="speed">Hide Speed</option>
+              <option value="distance">Hide Distance</option>
+              <option value="time">Hide Time</option>
+            </select>
+          </div>
+          <div>
+            <label>Speed (m/s)</label>
+            <input type="number" id="speedF" step="0.1" value="5">
+          </div>
+          <div>
+            <label>Distance (m)</label>
+            <input type="number" id="distanceF" step="0.1" value="120">
+          </div>
+          <div>
+            <label>Time (s)</label>
+            <input type="number" id="timeF" step="0.1" value="24">
+          </div>
+        </div>
+
+        <div class="predict-box">
+          <label>Make your prediction for the hidden value</label>
+          <input type="number" id="predictF" placeholder="your guess" />
+          <button class="btn" id="checkF">Check</button>
+          <button class="btn secondary" id="revealF">Reveal</button>
+        </div>
+        <div id="feedbackF" class="feedback muted"></div>
+        <div style="margin-top:8px" class="small">Hint: Speed = Distance ÷ Time. Distance = Speed × Time. Time = Distance ÷ Speed.</div>
+      </div>
+
+    </div>
+
+    <!-- Side: Story + instructions + progress -->
+    <div class="side">
+      <div class="card story" id="storyCard">
+        <h3>Story & Instructions</h3>
+        <div id="storyText">
+          <p><b>Welcome!</b> Riya and Arjun are your friends. Use sliders to set speeds and distances, make predictions, then run simulations. Follow the story hints to get the Aha! moments.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Quick tips</h3>
+        <ul class="small" style="padding-left:18px;margin:8px 0">
+          <li>Speed (m/s) = Distance (m) ÷ Time (s).</li>
+          <li>For same time window, higher speed → larger distance.</li>
+          <li>For same distance, higher speed → less time.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Progress</h3>
+        <div id="progressBox" class="small">No attempts yet. Predictions and results will appear here.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Try predict → simulate → explain. That loop creates true understanding!</footer>
+
+  <script>
+    /* ------------------------
+       Helpers & state
+       ------------------------ */
+    const show = (id)=>{ document.getElementById(id).style.display = 'block' }
+    const hide = (id)=>{ document.getElementById(id).style.display = 'none' }
+    const setText=(id,txt)=>{ document.getElementById(id).textContent = txt }
+    const toFixed=(v,n=2)=> parseFloat(v).toFixed(n)
+
+    // Tab switching
+    document.getElementById('tabDistance').onclick = ()=>{ activateTab('Distance') }
+    document.getElementById('tabSpeed').onclick = ()=>{ activateTab('Speed') }
+    document.getElementById('tabFormula').onclick = ()=>{ activateTab('Formula') }
+
+    function activateTab(name){
+      // buttons
+      ['tabDistance','tabSpeed','tabFormula'].forEach(id=>document.getElementById(id).classList.remove('active'))
+      if(name==='Distance'){ document.getElementById('tabDistance').classList.add('active'); show('panelDistance'); hide('panelSpeed'); hide('panelFormula'); updateStory('Distance') }
+      if(name==='Speed'){ document.getElementById('tabSpeed').classList.add('active'); hide('panelDistance'); show('panelSpeed'); hide('panelFormula'); updateStory('Speed') }
+      if(name==='Formula'){ document.getElementById('tabFormula').classList.add('active'); hide('panelDistance'); hide('panelSpeed'); show('panelFormula'); updateStory('Formula') }
+    }
+
+    function updateStory(tab){
+      const story = document.getElementById('storyText')
+      if(tab==='Distance'){
+        story.innerHTML = `<p><b>Chapter — Distance Discovery</b><br>Riya and Arjun start together. You control their speeds. Predict who covers more ground in the time window — then run the clock.</p>`
+      } else if(tab==='Speed'){
+        story.innerHTML = `<p><b>Chapter — Speed Challenge</b><br>They race same distance. Your job: find how fast Riya needs to be to beat Arjun. Predict and test.</p>`
+      } else {
+        story.innerHTML = `<p><b>Chapter — Formula Puzzle</b><br>Fill two values and compute the third. Help Arjun make the calculation to win the checkpoint challenge.</p>`
+      }
+    }
+
+    /* ------------------------
+       Distance Mode Logic
+       ------------------------ */
+    const spdR_D_range = document.getElementById('spdR_D_range'), spdA_D_range = document.getElementById('spdA_D_range'), timeWindow_D_range = document.getElementById('timeWindow_D_range')
+    const riyaD = document.getElementById('riyaD'), arjunD = document.getElementById('arjunD'), trackD = document.getElementById('trackD')
+    let chartD = null
+
+    function updateDistanceUI(){
+      setText('spdR_D', toFixed(spdR_D_range.value,1))
+      setText('spdA_D', toFixed(spdA_D_range.value,1))
+      setText('timeWindow_D', timeWindow_D_range.value)
+    }
+    spdR_D_range.oninput = updateDistanceUI; spdA_D_range.oninput = updateDistanceUI; timeWindow_D_range.oninput = updateDistanceUI
+    updateDistanceUI()
+
+    // simulate for the time window; show who covered more
+    document.getElementById('runD').onclick = ()=>{
+      // compute distances
+      const vR = parseFloat(spdR_D_range.value), vA=parseFloat(spdA_D_range.value), T=parseFloat(timeWindow_D_range.value);
+      const dR = vR * T, dA = vA * T
+      setText('distR_D', toFixed(dR,2)); setText('distA_D', toFixed(dA,2))
+
+      // animate on track proportionally to distances
+      const trackWidth = trackD.offsetWidth - riyaD.offsetWidth - 8
+      const maxD = Math.max(dR,dA,1)
+      const totalSteps = 60; let step=0
+      const startLeft = 8
+      const leftR_end = startLeft + (dR / maxD) * trackWidth
+      const leftA_end = startLeft + (dA / maxD) * trackWidth
+
+      // chart data
+      const labels = []; const dataR=[]; const dataA=[]
+      for(let i=0;i<=totalSteps;i++){
+        labels.push((i/totalSteps * T).toFixed(2))
+        dataR.push((vR * (i/totalSteps * T)).toFixed(2))
+        dataA.push((vA * (i/totalSteps * T)).toFixed(2))
+      }
+      updateChartD(labels,dataR,dataA)
+
+      // animate
+      const id = setInterval(()=>{
+        step++; const pct = step/totalSteps
+        riyaD.style.left = (startLeft + (leftR_end - startLeft) * pct) + 'px'
+        arjunD.style.left = (startLeft + (leftA_end - startLeft) * pct) + 'px'
+        if(step>=totalSteps) clearInterval(id)
+      }, 35)
+
+      // give story feedback
+      let msg = `In ${T}s, Riya covered ${toFixed(dR,2)} m; Arjun covered ${toFixed(dA,2)} m.`
+      if(Math.abs(dR-dA) < 1e-6) msg += ' It is a tie!'
+      else msg += ` ${dR>dA? 'Riya' : 'Arjun'} covered more distance.`
+
+      setText('feedbackD', msg); updateProgress({mode:'distance',vR,dR,vA,dA,T, result: (dR>dA? 'Riya' : (dA>dR? 'Arjun':'Tie'))})
+    }
+
+    // prediction check
+    document.getElementById('checkPred_D').onclick = ()=>{
+      const pred = document.getElementById('predictWho_D').value
+      const vR = parseFloat(spdR_D_range.value), vA=parseFloat(spdA_D_range.value), T=parseFloat(timeWindow_D_range.value)
+      const dR = vR*T, dA=vA*T
+      const actual = (Math.abs(dR-dA)<1e-6 ? 'Tie' : (dR>dA? 'Riya' : 'Arjun'))
+      const fb = document.getElementById('feedbackD')
+      if(pred===actual){ fb.style.color='var(--good)'; fb.textContent = `Nice! You predicted ${pred} and you're correct. (${toFixed(dR,2)}m vs ${toFixed(dA,2)}m)` }
+      else { fb.style.color='var(--warn)'; fb.textContent = `Close — you predicted ${pred} but actual is ${actual}. (${toFixed(dR,2)}m vs ${toFixed(dA,2)}m)` }
+      updateProgress({mode:'distance_pred',predict:pred,actual:actual})
+    }
+
+    document.getElementById('resetD').onclick = ()=>{
+      riyaD.style.left='8px'; arjunD.style.left='8px'; setText('distR_D','0'); setText('distA_D','0'); setText('feedbackD','')
+      if(chartD) { chartD.data.labels=[]; chartD.data.datasets[0].data=[]; chartD.data.datasets[1].data=[]; chartD.update(); }
+    }
+
+    function initChartD(){
+      const ctx = document.getElementById('chartD').getContext('2d')
+      chartD = new Chart(ctx,{type:'line',data:{labels:[],datasets:[
+        {label:'Riya dist (m)',data:[],borderColor:'#ff7b7b',fill:false},
+        {label:'Arjun dist (m)',data:[],borderColor:'#4f8cff',fill:false}
+      ]}, options:{plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}}}})
+    }
+    function updateChartD(labels,dR,dA){ if(chartD){ chartD.data.labels = labels; chartD.data.datasets[0].data = dR; chartD.data.datasets[1].data = dA; chartD.update(); } }
+
+    /* ------------------------
+       Speed Mode Logic
+       ------------------------ */
+    const raceDist_S_range = document.getElementById('raceDist_S_range'), spdR_S_range = document.getElementById('spdR_S_range'), spdA_S_range = document.getElementById('spdA_S_range')
+    const riyaS = document.getElementById('riyaS'), arjunS = document.getElementById('arjunS'), trackS = document.getElementById('trackS')
+    let chartS = null
+
+    function updateSpeedUI(){
+      setText('raceDist_S', raceDist_S_range.value)
+      setText('spdR_S', toFixed(spdR_S_range.value,1))
+      setText('spdA_S', toFixed(spdA_S_range.value,1))
+    }
+    raceDist_S_range.oninput = updateSpeedUI; spdR_S_range.oninput = updateSpeedUI; spdA_S_range.oninput = updateSpeedUI
+    updateSpeedUI()
+
+    document.getElementById('runS').onclick = ()=>{
+      const D = parseFloat(raceDist_S_range.value), vR = parseFloat(spdR_S_range.value), vA = parseFloat(spdA_S_range.value)
+      // times
+      const tR = vR>0 ? D / vR : Infinity, tA = vA>0 ? D / vA : Infinity
+      setText('timeR_S', toFixed(tR,2)); setText('timeA_S', toFixed(tA,2))
+
+      // animate: we map distance -> track width
+      const trackWidth = trackS.offsetWidth - riyaS.offsetWidth - 8
+      const totalSteps = 80, startLeft=8
+      let step=0
+      const leftR_end = startLeft + (D / D) * trackWidth // both go to end; but we animate with ratio of t
+      // We'll animate such that faster runner moves quicker
+      const id = setInterval(()=>{
+        step++
+        // progress fraction for each runner: progress = elapsed/time / 1 (capped)
+        const pctR = Math.min(1, step/totalSteps * ( (1/tR) / (1/tR + 1/tA) * 2 || 1) )
+        const pctA = Math.min(1, step/totalSteps * ( (1/tA) / (1/tR + 1/tA) * 2 || 1) )
+        riyaS.style.left = (startLeft + pctR*trackWidth) + 'px'
+        arjunS.style.left = (startLeft + pctA*trackWidth) + 'px'
+        if(step>=totalSteps) clearInterval(id)
+      },30)
+
+      // Chart: distance vs time simple linear
+      const labels=[]; const rDist=[]; const aDist=[]
+      const steps=50
+      for(let i=0;i<=steps;i++){
+        const tt = (i/steps)*Math.max(tR,tA)
+        labels.push(toFixed(tt,2))
+        rDist.push(toFixed(Math.min(D, vR*tt),2))
+        aDist.push(toFixed(Math.min(D, vA*tt),2))
+      }
+      updateChartS(labels,rDist,aDist)
+
+      // result
+      let winner = (Math.abs(tR - tA) < 1e-6) ? 'Tie' : (tR < tA ? 'Riya' : 'Arjun')
+      setText('feedbackS', `Riya time: ${toFixed(tR,2)}s; Arjun time: ${toFixed(tA,2)}s. Winner: ${winner}`)
+      updateProgress({mode:'speed',D,vR,vA,tR,tA,winner})
+    }
+
+    // prediction check: student predicts minimum speed Riya needs to beat Arjun (given Arjun's speed & distance)
+    document.getElementById('checkPred_S').onclick = ()=>{
+      const D = parseFloat(raceDist_S_range.value), vA = parseFloat(spdA_S_range.value)
+      const required = D / (D / vA) // trivially vA, but student may propose greater; more meaningfully, required is just > vA to beat him in same distance if start same time
+      // Actually the minimum speed to beat Arjun is any speed > vA (if starts same time) ; but consider tie at equal.
+      const student = parseFloat(document.getElementById('predictSpeed_S').value)
+      const fb = document.getElementById('feedbackS')
+      if(isNaN(student)){ fb.style.color=''; fb.textContent = 'Enter a numeric speed to check.'; return; }
+      if(student > vA){ fb.style.color='var(--good)'; fb.textContent = `Good! ${student} m/s > Arjun's ${vA} m/s — Riya will finish earlier (assuming same start).` }
+      else if(Math.abs(student - vA) < 1e-6){ fb.style.color='var(--warn)'; fb.textContent = `If equal to ${vA} m/s, it's a tie (ignoring fractions).` }
+      else { fb.style.color='var(--bad)'; fb.textContent = `${student} m/s is not enough — Arjun at ${vA} m/s would be faster.` }
+      updateProgress({mode:'speed_pred',student,requiredCompare: vA})
+    }
+
+    document.getElementById('resetS').onclick = ()=>{
+      riyaS.style.left='8px'; arjunS.style.left='8px'; setText('timeR_S','0'); setText('timeA_S','0'); setText('feedbackS','')
+      if(chartS) { chartS.data.labels=[]; chartS.data.datasets[0].data=[]; chartS.data.datasets[1].data=[]; chartS.update(); }
+    }
+
+    function initChartS(){
+      const ctx = document.getElementById('chartS').getContext('2d')
+      chartS = new Chart(ctx,{type:'line',data:{labels:[],datasets:[
+        {label:'Riya dist (m)',data:[],borderColor:'#ff7b7b',fill:false},
+        {label:'Arjun dist (m)',data:[],borderColor:'#4f8cff',fill:false}
+      ]}, options:{plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}}}})
+    }
+    function updateChartS(labels,dR,dA){ if(chartS){ chartS.data.labels = labels; chartS.data.datasets[0].data = dR; chartS.data.datasets[1].data = dA; chartS.update(); } }
+
+    /* ------------------------
+       Formula Puzzle Logic
+       ------------------------ */
+    const hideVarF = document.getElementById('hideVarF'), speedF = document.getElementById('speedF'), distanceF = document.getElementById('distanceF'), timeF = document.getElementById('timeF'), predictF = document.getElementById('predictF')
+    function adjustHiddenInputs(){
+      const hv = hideVarF.value
+      speedF.disabled = (hv==='speed'); distanceF.disabled = (hv==='distance'); timeF.disabled = (hv==='time')
+      document.getElementById('feedbackF').textContent = ''
+    }
+    hideVarF.onchange = adjustHiddenInputs
+    adjustHiddenInputs()
+
+    function computeHidden(){
+      const hv = hideVarF.value
+      const s = parseFloat(speedF.value), d = parseFloat(distanceF.value), t = parseFloat(timeF.value)
+      if(hv==='speed') return d / t
+      if(hv==='distance') return s * t
+      return d / s
+    }
+
+    document.getElementById('checkF').onclick = ()=>{
+      const actual = computeHidden()
+      const guess = parseFloat(predictF.value)
+      const fb = document.getElementById('feedbackF')
+      if(isNaN(guess)){ fb.style.color=''; fb.textContent = 'Enter a numeric prediction.'; return; }
+      const diff = Math.abs(guess - actual)
+      if(diff <= Math.max(0.05, 0.05*Math.abs(actual))){ fb.style.color='var(--good)'; fb.textContent = `Excellent! Your guess ${guess} is close. Actual = ${toFixed(actual,3)}.` }
+      else { fb.style.color='var(--warn)'; fb.textContent = `Not quite. Your guess ${guess} differs from actual ${toFixed(actual,3)}. Tip: ${explainHidden(hideVarF.value)}` }
+      updateProgress({mode:'formula_pred',hidden:hideVarF.value,actual:toFixed(actual,3),guess})
+    }
+
+    document.getElementById('revealF').onclick = ()=>{
+      const actual = computeHidden()
+      setText('feedbackF', `Actual = ${toFixed(actual,3)}. ${explainHidden(hideVarF.value)}`)
+      document.getElementById('feedbackF').style.color = ''
+      updateProgress({mode:'formula_reveal',hidden:hideVarF.value,actual:toFixed(actual,3)})
+    }
+
+    function explainHidden(which){
+      if(which==='speed') return 'Speed = Distance ÷ Time. If you want more speed for same distance, reduce time.'
+      if(which==='distance') return 'Distance = Speed × Time. Doubling either doubles distance.'
+      return 'Time = Distance ÷ Speed. Increasing speed reduces time for same distance.'
+    }
+
+    /* ------------------------
+       Progress logging (local)
+       ------------------------ */
+    function updateProgress(obj){
+      const hist = JSON.parse(localStorage.getItem('race_story_hist')||'[]')
+      hist.push({...obj, ts:new Date().toISOString()})
+      localStorage.setItem('race_story_hist', JSON.stringify(hist.slice(-30)))
+      renderProgress()
+    }
+    function renderProgress(){
+      const hist = JSON.parse(localStorage.getItem('race_story_hist')||'[]')
+      const box = document.getElementById('progressBox')
+      if(hist.length===0){ box.textContent = 'No attempts yet.'; return }
+      const last = hist.slice(-6).reverse()
+      box.innerHTML = last.map(it => `<div style="margin-bottom:6px"><small>${it.ts.split('T')[0]} · ${it.mode} · ${JSON.stringify((function(){let t={}; for(let k in it) if(k!=='ts') t[k]=it[k]; return t})())}</small></div>`).join('')
+    }
+
+    /* ------------------------
+       Init everything
+       ------------------------ */
+    window.addEventListener('load', ()=>{
+      activateTab('Distance')
+      initChartD(); initChartS(); renderProgress()
+    })
+
+    // tiny UX: press Enter in predict inputs triggers check
+    document.getElementById('predictSpeed_S').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('checkPred_S').click() })
+    predictF.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('checkF').click() })
+    document.getElementById('predictWho_D').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('checkPred_D').click() })
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SDT — Advanced Interactive Simulator</title>
+
+  <!-- Chart.js for graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --bg:#f4f6fb; --card:#fff; --accent:#0b74da; --muted:#666;
+      --success:#1f9d55; --danger:#d64545;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:#111}
+    header{background:linear-gradient(90deg,#0b74da, #2a9df4);color:white;padding:18px 24px}
+    header h1{margin:0;font-weight:600;font-size:18px}
+    .app{display:flex; height:calc(100vh - 64px)}
+    .left{flex:3; padding:16px; overflow:auto}
+    .right{flex:1.05; padding:16px;border-left:1px solid rgba(0,0,0,0.06); background:linear-gradient(180deg,#fbfdff,#f7fbff)}
+    .tabs{display:flex; gap:8px; margin-bottom:12px}
+    .tab-btn{padding:10px 14px;border-radius:8px;border:none;background:rgba(0,0,0,0.06);cursor:pointer}
+    .tab-btn.active{background:var(--card);box-shadow:0 2px 8px rgba(11,116,218,0.12); color:var(--accent)}
+    .card{background:var(--card); border-radius:10px; padding:12px; margin-bottom:12px; box-shadow:0 1px 6px rgba(16,24,40,0.04)}
+    .track{height:120px;border-radius:10px;background:linear-gradient(90deg,#eee,#ddd);position:relative;overflow:hidden;border:1px solid #e1e7f2}
+    .runner{position:absolute;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+    .runner.a{background:#0b74da; top:16px}
+    .runner.b{background:#2a9df4; top:64px}
+    .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=range]{width:100%}
+    .small{font-size:13px;color:var(--muted)}
+    .row{display:flex;gap:8px;align-items:center}
+    .btn{padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer}
+    .btn.secondary{background:#fff;border:1px solid #cfe6ff;color:var(--accent)}
+    .muted{color:var(--muted);font-size:13px}
+    .formula{font-weight:600;margin-top:8px}
+    .hint{background:#fff8e6;padding:8px;border-radius:6px;border:1px solid #ffeab3;color:#7a5b00}
+    .chat{height:320px; overflow:auto; padding:8px; background:linear-gradient(180deg,#fff,#fbfdff); border-radius:8px; border:1px solid #e6f0ff}
+    .chat p{margin:6px 0}
+    .user{color:var(--accent); font-weight:600}
+    .bot{color:#0b3a66}
+    .statline{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+    .stat{background:#f3f8ff;padding:8px;border-radius:8px;font-size:13px}
+    .graph-row{display:flex;gap:12px;margin-top:12px}
+    canvas{background:white;border-radius:8px;padding:8px}
+    .predict{display:flex;gap:8px;align-items:center}
+    .feedback{margin-top:8px;font-weight:600}
+    footer{padding:12px; text-align:center; color:var(--muted); font-size:13px}
+    @media (max-width:900px){ .app {flex-direction:column} .right{order:2} .left{order:1} .graph-row{flex-direction:column} }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Speed • Distance • Time — Advanced Interactive Simulator</h1>
+</header>
+
+<div class="app">
+  <div class="left">
+    <div class="tabs">
+      <button class="tab-btn active" id="tFoundation">Foundation</button>
+      <button class="tab-btn" id="tFormula">Formula Discovery</button>
+      <button class="tab-btn" id="tComparative">Comparative</button>
+    </div>
+
+    <!-- FOUNDATION -->
+    <div class="card" id="panelFoundation">
+      <h2>Foundation — Visualize motion</h2>
+      <div class="track" id="trackF">
+        <div class="runner a" id="runnerF" style="left:0">A</div>
+      </div>
+
+      <div class="controls">
+        <div>
+          <label>Speed (<span id="unitLabelF">m/s</span>) — current: <span id="speedFDisplay">5</span></label>
+          <input type="range" id="speedF" min="0.5" max="30" step="0.1" value="5">
+        </div>
+        <div>
+          <label>Distance (m) — current: <span id="distFDisplay">100</span></label>
+          <input type="range" id="distF" min="10" max="1000" step="1" value="100">
+        </div>
+        <div>
+          <label>Playback speed</label>
+          <select id="playbackF">
+            <option value="1">Normal</option>
+            <option value="0.5">Slow motion (0.5×)</option>
+            <option value="0.25">Slow motion (0.25×)</option>
+            <option value="2">Faster (2×)</option>
+          </select>
+        </div>
+        <div>
+          <label>Units</label>
+          <div class="row">
+            <button class="btn secondary" id="unitToggleF">Switch to km/h</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;gap:12px;align-items:center">
+        <div class="formula">Formula: <span id="formulaF">Speed = Distance ÷ Time</span></div>
+        <div class="statline">
+          <div class="stat">Speed: <span id="statSpeedF">5 m/s</span></div>
+          <div class="stat">Distance: <span id="statDistF">100 m</span></div>
+          <div class="stat">Time (calc): <span id="statTimeF">20 s</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="row">
+        <button class="btn" id="startF">Start</button>
+        <button class="btn secondary" id="pauseF">Pause</button>
+        <button class="btn secondary" id="resetF">Reset</button>
+        <div style="flex:1"></div>
+        <div class="hint" id="hintF">Hint: Increasing speed decreases time to finish proportionally for constant distance.</div>
+      </div>
+
+      <div class="graph-row">
+        <div style="flex:1" class="card">
+          <h4 style="margin:4px 0">Distance vs Time (preview)</h4>
+          <canvas id="distTimeChartF" height="160"></canvas>
+        </div>
+        <div style="flex:1" class="card">
+          <h4 style="margin:4px 0">Speed vs Time (preview)</h4>
+          <canvas id="speedTimeChartF" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORMULA DISCOVERY -->
+    <div class="card" id="panelFormula" style="display:none">
+      <h2>Formula Discovery — Hide one variable</h2>
+      <p class="muted">Choose which variable to hide. Enter predictions; check & get explanation.</p>
+
+      <div class="controls">
+        <div>
+          <label>Hide variable</label>
+          <select id="hideVar">
+            <option value="time">Hide Time</option>
+            <option value="speed">Hide Speed</option>
+            <option value="distance">Hide Distance</option>
+          </select>
+        </div>
+        <div>
+          <label>Speed (m/s)</label>
+          <input type="number" id="speedD" step="0.1" value="12">
+        </div>
+        <div>
+          <label>Distance (m)</label>
+          <input type="number" id="distD" step="0.1" value="120">
+        </div>
+        <div>
+          <label>Time (s)</label>
+          <input type="number" id="timeD" step="0.1" value="10">
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="row">
+        <div class="predict">
+          <label>Enter your prediction for the hidden value:</label>
+          <input type="number" id="predictInput" style="padding:8px;border-radius:8px;border:1px solid #dde9ff;margin-left:8px">
+        </div>
+        <button class="btn" id="checkPredict">Check</button>
+        <button class="btn secondary" id="revealBtn">Reveal</button>
+      </div>
+
+      <div id="feedbackBox" class="feedback muted"></div>
+      <div style="margin-top:8px" class="hint" id="explainBox">Tip: Use Speed = Distance ÷ Time. Convert units if needed.</div>
+    </div>
+
+    <!-- COMPARATIVE -->
+    <div class="card" id="panelComparative" style="display:none">
+      <h2>Comparative — Race & Overtake</h2>
+      <div class="track" id="trackC">
+        <div class="runner a" id="runnerCA" style="left:0">A</div>
+        <div class="runner b" id="runnerCB" style="left:0">B</div>
+        <div id="overtakeMark" style="position:absolute;top:0;display:none;">
+          <!-- inserted dynamically -->
+        </div>
+      </div>
+
+      <div class="controls">
+        <div>
+          <label>Speed A (m/s): <span id="spdADisplay">6</span></label>
+          <input type="range" id="spdA" min="0.5" max="30" step="0.1" value="6">
+        </div>
+        <div>
+          <label>Speed B (m/s): <span id="spdBDisplay">10</span></label>
+          <input type="range" id="spdB" min="0.5" max="30" step="0.1" value="10">
+        </div>
+        <div>
+          <label>Delayed start for A (s)</label>
+          <input type="number" id="delayA" value="0" min="0" step="0.1">
+        </div>
+        <div>
+          <label>Race Distance (m)</label>
+          <input type="number" id="raceDist" value="200" min="10" step="1">
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="row">
+        <button class="btn" id="startC">Start Race</button>
+        <button class="btn secondary" id="pauseC">Pause</button>
+        <button class="btn secondary" id="resetC">Reset</button>
+        <div style="flex:1"></div>
+        <div class="hint">Observe where lines cross on Distance-Time graph = overtaking point.</div>
+      </div>
+
+      <div class="graph-row">
+        <div style="flex:1" class="card">
+          <h4 style="margin:4px 0">Distance vs Time (Race)</h4>
+          <canvas id="distTimeChartC" height="200"></canvas>
+        </div>
+        <div style="flex:1" class="card">
+          <h4 style="margin:4px 0">Speed vs Time (Race)</h4>
+          <canvas id="speedTimeChartC" height="200"></canvas>
+        </div>
+      </div>
+
+      <div style="margin-top:8px">
+        <div class="statline">
+          <div class="stat">Winner: <span id="winnerC">—</span></div>
+          <div class="stat">Overtake at: <span id="overtakeC">—</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Chatbot + small guide -->
+  <div class="right">
+    <div class="card">
+      <h3>Guided Tutor</h3>
+      <div class="chat" id="chatArea">
+        <p class="bot"><b>Bot:</b> Hi! I'll guide you through experiments. Try the Foundation first — change speed & distance.</p>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="chatInput" placeholder="Ask a question (e.g., 'what is time if speed=5 and dist=100?')" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6f0ff">
+        <button class="btn" onclick="botAnswer()">Ask</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h4>Quick tips</h4>
+      <ol style="padding-left:18px;margin:8px 0">
+        <li>Slope on distance-time = speed.</li>
+        <li>Area under speed-time = distance.</li>
+        <li>If two lines cross, that is when someone overtakes.</li>
+      </ol>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h4>Progress</h4>
+      <p class="muted">Your last results are saved locally.</p>
+      <div id="progressBox" class="muted">No results yet.</div>
+    </div>
+  </div>
+</div>
+
+<footer>Tip: Use <strong>predict → simulate → explain</strong> loop to deepen intuition.</footer>
+
+<script>
+/* ============================
+  Utility helpers & state
+   ============================ */
+const clamp = (v,min,max)=> Math.max(min,Math.min(max,v));
+const toFixedNum = (n,prec=2)=> Number(parseFloat(n).toFixed(prec));
+let unitIsMS_F = true; // foundation units flag
+let foundationState = {running:false,paused:false,position:0,t:0};
+let intervalF = null;
+
+// Charts placeholders
+let distChartF=null, speedChartF=null;
+let distChartC=null, speedChartC=null;
+
+/* ============================
+  Tabs
+   ============================ */
+const btnF=document.getElementById('tFoundation'), btnFormula=document.getElementById('tFormula'), btnC=document.getElementById('tComparative');
+const pF=document.getElementById('panelFoundation'), pD=document.getElementById('panelFormula'), pC=document.getElementById('panelComparative');
+btnF.onclick=()=>{ btnF.classList.add('active'); btnFormula.classList.remove('active'); btnC.classList.remove('active'); pF.style.display='block'; pD.style.display='none'; pC.style.display='none'}
+btnFormula.onclick=()=>{ btnFormula.classList.add('active'); btnF.classList.remove('active'); btnC.classList.remove('active'); pD.style.display='block'; pF.style.display='none'; pC.style.display='none'}
+btnC.onclick=()=>{ btnC.classList.add('active'); btnF.classList.remove('active'); btnFormula.classList.remove('active'); pC.style.display='block'; pF.style.display='none'; pD.style.display='none'}
+
+/* ============================
+  FOUNDATION logic
+   ============================ */
+const speedF = document.getElementById('speedF'), distF=document.getElementById('distF'), playbackF=document.getElementById('playbackF');
+const runnerF=document.getElementById('runnerF'), trackF=document.getElementById('trackF');
+const speedFDisplay=document.getElementById('speedFDisplay'), distFDisplay=document.getElementById('distFDisplay'), statSpeedF=document.getElementById('statSpeedF'), statDistF=document.getElementById('statDistF'), statTimeF=document.getElementById('statTimeF'), formulaF=document.getElementById('formulaF'), unitToggleF=document.getElementById('unitToggleF');
+
+function updateFoundationStats(){
+  const sp = parseFloat(speedF.value);
+  const dist = parseFloat(distF.value);
+  const time = dist / sp;
+  speedFDisplay.textContent = toFixedNum(sp,2);
+  distFDisplay.textContent = Math.round(dist);
+  statSpeedF.textContent = (unitIsMS_F? toFixedNum(sp,2)+' m/s' : toFixedNum(sp*3.6,2)+' km/h');
+  statDistF.textContent = `${Math.round(dist)} m`;
+  statTimeF.textContent = `${toFixedNum(time,2)} s`;
+  formulaF.textContent = `Speed = Distance ÷ Time | ${toFixedNum(sp,2)} = ${Math.round(dist)} ÷ ${toFixedNum(time,2)}`;
+  updateFoundationCharts(sp, dist);
+}
+
+speedF.oninput = ()=>{ updateFoundationStats(); }
+distF.oninput = ()=>{ updateFoundationStats(); }
+
+unitToggleF.onclick = ()=>{
+  unitIsMS_F = !unitIsMS_F;
+  unitToggleF.textContent = unitIsMS_F ? 'Switch to km/h' : 'Switch to m/s';
+  document.getElementById('unitLabelF').textContent = unitIsMS_F ? 'm/s' : 'km/h';
+  // convert value in UI slider to maintain same physical speed
+  if(unitIsMS_F){
+    // currently km/h -> convert to m/s
+    speedF.value = (parseFloat(speedF.value))* (1/3.6);
+  } else {
+    // convert m/s -> km/h
+    speedF.value = (parseFloat(speedF.value)) * 3.6;
+  }
+  updateFoundationStats();
+}
+
+/* Simulation start/pause/reset */
+document.getElementById('startF').onclick = ()=>{
+  if(foundationState.running && !foundationState.paused) return; // already running
+  foundationState.running = true;
+  foundationState.paused = false;
+  // compute pixels per meter
+  const trackW = trackF.offsetWidth - runnerF.offsetWidth;
+  const dist = parseFloat(distF.value);
+  const sp = parseFloat(speedF.value) * (unitIsMS_F ? 1 : (1/3.6)); // ensure m/s in calc
+  const playback = parseFloat(playbackF.value);
+  clearInterval(intervalF);
+  const startTime = performance.now() - (foundationState.t*1000);
+  intervalF = setInterval(()=>{
+    const elapsed = ((performance.now() - startTime)/1000)*playback; // scaled
+    foundationState.t = elapsed;
+    const travelled = clamp(sp * elapsed, 0, dist);
+    const pct = (travelled/dist);
+    foundationState.position = pct * trackW;
+    runnerF.style.left = foundationState.position + 'px';
+    updateFoundationStats();
+    if(travelled >= dist){
+      clearInterval(intervalF);
+      foundationState.running = false;
+      saveProgress({mode:'foundation',speed:sp,distance:dist,time:toFixedNum(dist/sp,3)});
+      chatBotSay(`Finished! Time taken = ${toFixedNum(dist/sp,3)} s at ${toFixedNum(sp,3)} m/s.`);
+    }
+  }, 80);
+};
+
+document.getElementById('pauseF').onclick = ()=>{
+  if(!foundationState.running) return;
+  if(foundationState.paused){
+    // resume (simulate by calling start again but starting from current elapsed)
+    foundationState.paused=false;
+    document.getElementById('startF').click();
+  } else {
+    foundationState.paused=true;
+    foundationState.running=false;
+    clearInterval(intervalF);
+  }
+};
+
+document.getElementById('resetF').onclick = ()=>{
+  clearInterval(intervalF);
+  foundationState = {running:false,paused:false,position:0,t:0};
+  runnerF.style.left = '0px';
+  updateFoundationStats();
+};
+
+/* Charts update for foundation: distance-time is single straight line using constant speed */
+function updateFoundationCharts(sp, dist){
+  // build small time series to show straight line: 0..T in 10 steps
+  const sp_m_s = unitIsMS_F ? sp : sp*(1/3.6);
+  const T = dist / sp_m_s;
+  const pts = 20;
+  const labels = [];
+  const distPts = [], speedPts=[];
+  for(let i=0;i<=pts;i++){
+    const t = T*(i/pts);
+    labels.push(toFixedNum(t,2));
+    distPts.push(toFixedNum(sp_m_s*t,2));
+    speedPts.push(toFixedNum(sp_m_s,2));
+  }
+  if(distChartF) {
+    distChartF.data.labels = labels;
+    distChartF.data.datasets[0].data = distPts;
+    distChartF.update();
+  }
+  if(speedChartF){
+    speedChartF.data.labels = labels;
+    speedChartF.data.datasets[0].data = speedPts;
+    speedChartF.update();
+  }
+}
+
+/* Initialize Foundation charts */
+function initFoundationCharts(){
+  const ctxD = document.getElementById('distTimeChartF').getContext('2d');
+  distChartF = new Chart(ctxD, {
+    type:'line',
+    data:{labels:[], datasets:[{label:'Distance (m)', data:[], fill:false, tension:0.2}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}
+  });
+  const ctxS = document.getElementById('speedTimeChartF').getContext('2d');
+  speedChartF = new Chart(ctxS, {
+    type:'line',
+    data:{labels:[], datasets:[{label:'Speed (m/s)', data:[], fill:false, tension:0.2}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}
+  });
+}
+
+/* ============================
+  FORMULA DISCOVERY logic
+   ============================ */
+const hideVar = document.getElementById('hideVar'), speedD = document.getElementById('speedD'), distD = document.getElementById('distD'), timeD = document.getElementById('timeD');
+const predictInput = document.getElementById('predictInput'), checkPredict = document.getElementById('checkPredict'), revealBtn = document.getElementById('revealBtn'), feedbackBox = document.getElementById('feedbackBox'), explainBox = document.getElementById('explainBox');
+
+function computeHidden(){
+  const s = parseFloat(speedD.value), d = parseFloat(distD.value), t = parseFloat(timeD.value);
+  const which = hideVar.value;
+  if(which==='time'){
+    return d / s;
+  } else if(which==='speed'){
+    return d / t;
+  } else { // distance
+    return s * t;
+  }
+}
+
+checkPredict.onclick = ()=>{
+  const real = computeHidden();
+  const pred = parseFloat(predictInput.value);
+  if(isNaN(pred)){ feedbackBox.textContent = 'Please enter a numeric prediction.'; feedbackBox.style.color=''; return; }
+  const diff = Math.abs(pred - real);
+  const pct = diff / (Math.abs(real) + 1e-9);
+  if(pct < 0.05){
+    feedbackBox.style.color = 'var(--success)';
+    feedbackBox.textContent = `Great! Your prediction (${pred}) is very close. Actual = ${toFixedNum(real,3)}. Reason: ${explainHidden()}`;
+  } else {
+    feedbackBox.style.color = 'var(--danger)';
+    feedbackBox.textContent = `Not quite. Your prediction ${pred} differs from actual ${toFixedNum(real,3)} by ${toFixedNum(diff,3)}. Tip: ${explainHidden()}`;
+  }
+  saveProgress({mode:'discovery',hidden:hideVar.value,actual:toFixedNum(real,3),pred:pred});
+};
+
+revealBtn.onclick = ()=>{
+  feedbackBox.style.color=''; feedbackBox.textContent = `Actual = ${toFixedNum(computeHidden(),3)}. ${explainHidden()}`;
+};
+
+function explainHidden(){
+  const which = hideVar.value;
+  if(which==='time') return `Time = Distance ÷ Speed. If speed increases, time decreases proportionally.`;
+  if(which==='speed') return `Speed = Distance ÷ Time. If time smaller for same distance, speed is greater.`;
+  return `Distance = Speed × Time. Doubling either doubles distance for constant other.`;
+}
+
+/* ============================
+  COMPARATIVE logic
+   ============================ */
+const runnerCA = document.getElementById('runnerCA'), runnerCB = document.getElementById('runnerCB'), trackC = document.getElementById('trackC');
+const spdA = document.getElementById('spdA'), spdB = document.getElementById('spdB'), delayA = document.getElementById('delayA'), raceDist = document.getElementById('raceDist');
+const spdADisplay = document.getElementById('spdADisplay'), spdBDisplay=document.getElementById('spdBDisplay'), startC=document.getElementById('startC'), pauseC=document.getElementById('pauseC'), resetC=document.getElementById('resetC');
+const winnerC=document.getElementById('winnerC'), overtakeC=document.getElementById('overtakeC');
+
+let raceState = {running:false,paused:false, t:0, posA:0, posB:0, startTime:0, pausedAt:0, interval:null, overtakePos:null};
+let unitMs = true;
+
+spdA.oninput = ()=>{ spdADisplay.textContent = toFixedNum(spdA.value,2); }
+spdB.oninput = ()=>{ spdBDisplay.textContent = toFixedNum(spdB.value,2); }
+
+startC.onclick = ()=>{
+  if(raceState.running) return;
+  winnerC.textContent='—'; overtakeC.textContent='—';
+  // prepare race variables (ensure speeds in m/s)
+  const vA = parseFloat(spdA.value);
+  const vB = parseFloat(spdB.value);
+  const d = parseFloat(raceDist.value);
+  const delay = parseFloat(delayA.value) || 0;
+  // reset positions
+  raceState.posA = 0; raceState.posB = 0; raceState.t = 0; raceState.overtakePos = null;
+  runnerCA.style.left='0px'; runnerCB.style.left='0px'; document.getElementById('overtakeMark').style.display='none';
+  const trackW = trackC.offsetWidth - runnerCA.offsetWidth;
+  const ppm = trackW / d;
+  raceState.running = true;
+  raceState.startTime = performance.now();
+  // build arrays for charts too
+  let timeSeries=[]; let distA=[]; let distB=[]; let speedASeries=[], speedBSeries=[];
+  clearInterval(raceState.interval);
+  raceState.interval = setInterval(()=>{
+    const elapsed = (performance.now() - raceState.startTime)/1000; // seconds
+    raceState.t = elapsed;
+    // A starts after delay
+    if(elapsed > delay){
+      raceState.posA = clamp((elapsed - delay) * vA, 0, d);
+    }
+    raceState.posB = clamp(elapsed * vB, 0, d);
+    runnerCA.style.left = (ppm * raceState.posA) + 'px';
+    runnerCB.style.left = (ppm * raceState.posB) + 'px';
+
+    // store for chart
+    timeSeries.push(toFixedNum(elapsed,2));
+    distA.push(toFixedNum(raceState.posA,2));
+    distB.push(toFixedNum(raceState.posB,2));
+    speedASeries.push(toFixedNum((elapsed>delay? vA : 0),2));
+    speedBSeries.push(toFixedNum(vB,2));
+
+    // check overtake: when posA > posB and previously posA <= posB (A overtakes B)
+    if(raceState.overtakePos===null && raceState.posA > raceState.posB){
+      raceState.overtakePos = toFixedNum(raceState.posA,2);
+      // mark on track
+      const mark = document.getElementById('overtakeMark');
+      mark.style.left = (ppm * raceState.overtakePos) + 'px';
+      mark.style.top = '0px';
+      mark.style.display = 'block';
+      mark.innerHTML = `<div style="position:absolute;top:0; left:-8px; color:#a00; font-weight:700">↑</div>
+                        <div style="position:absolute;top:12px; left:-30px; background:#fff0f0;border:1px solid #ffdede;padding:2px 6px;border-radius:6px;color:#b00">Overtake @ ${raceState.overtakePos} m</div>`;
+      overtakeC.textContent = `${raceState.overtakePos} m at t≈${toFixedNum(elapsed,2)} s`;
+    }
+
+    // finish detection
+    if(raceState.posA >= d || raceState.posB >= d){
+      clearInterval(raceState.interval);
+      raceState.running=false;
+      // determine winner by who reached distance earlier (approx)
+      let timeA = (raceState.posA >= d) ? (delay + (d / vA)) : Infinity;
+      let timeB = (raceState.posB >= d) ? (d / vB) : Infinity;
+      let winner = timeA < timeB ? 'A' : (timeB < timeA ? 'B' : 'Tie');
+      winnerC.textContent = winner;
+      saveProgress({mode:'comparative',vA:toFixedNum(vA,3),vB:toFixedNum(vB,3),distance:d,winner:winner,overtake:raceState.overtakePos||'—'});
+      chatBotSay(`Race finished. Winner: ${winner}.`);
+    }
+
+    // update charts live (throttled to avoid too many updates)
+    if(timeSeries.length % 4 === 0) updateComparativeCharts(timeSeries, distA, distB, speedASeries, speedBSeries);
+
+  }, 80);
+};
+
+pauseC.onclick = ()=>{
+  if(!raceState.running) return;
+  clearInterval(raceState.interval);
+  raceState.running=false;
+  raceState.paused=true;
+};
+
+resetC.onclick = ()=>{
+  clearInterval(raceState.interval);
+  raceState = {running:false,paused:false,t:0,posA:0,posB:0,startTime:0,pausedAt:0,interval:null,overtakePos:null};
+  runnerCA.style.left='0px'; runnerCB.style.left='0px';
+  winnerC.textContent='—'; overtakeC.textContent='—';
+  if(distChartC){ distChartC.data.labels=[]; distChartC.data.datasets[0].data=[]; distChartC.data.datasets[1].data=[]; distChartC.update(); }
+  if(speedChartC){ speedChartC.data.labels=[]; speedChartC.data.datasets[0].data=[]; speedChartC.data.datasets[1].data=[]; speedChartC.update(); }
+};
+
+/* Comparative Charts update */
+function initComparativeCharts(){
+  const ctxD = document.getElementById('distTimeChartC').getContext('2d');
+  distChartC = new Chart(ctxD, {
+    type:'line',
+    data:{labels:[], datasets:[
+      {label:'A dist (m)', data:[], borderColor:'#0b74da', fill:false},
+      {label:'B dist (m)', data:[], borderColor:'#2a9df4', fill:false}
+    ]},
+    options:{plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}}}
+  });
+  const ctxS = document.getElementById('speedTimeChartC').getContext('2d');
+  speedChartC = new Chart(ctxS, {
+    type:'line',
+    data:{labels:[], datasets:[
+      {label:'A speed (m/s)', data:[], borderColor:'#0b74da', fill:true, backgroundColor:'rgba(11,116,218,0.08)'},
+      {label:'B speed (m/s)', data:[], borderColor:'#2a9df4', fill:true, backgroundColor:'rgba(42,157,244,0.08)'}
+    ]},
+    options:{plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}}}
+  });
+}
+
+function updateComparativeCharts(labels, distA, distB, spA, spB){
+  // set to last N points to keep charts readable
+  const N = 60;
+  const L = labels.slice(-N);
+  if(distChartC){
+    distChartC.data.labels = L;
+    distChartC.data.datasets[0].data = distA.slice(-N);
+    distChartC.data.datasets[1].data = distB.slice(-N);
+    distChartC.update();
+  }
+  if(speedChartC){
+    speedChartC.data.labels = L;
+    speedChartC.data.datasets[0].data = spA.slice(-N);
+    speedChartC.data.datasets[1].data = spB.slice(-N);
+    speedChartC.update();
+  }
+}
+
+/* ============================
+  Chatbot (simple rule-based)
+   ============================ */
+function chatBotSay(text){
+  const box = document.getElementById('chatArea');
+  const p = document.createElement('p'); p.className='bot'; p.innerHTML=`<b>Bot:</b> ${text}`;
+  box.appendChild(p); box.scrollTop = box.scrollHeight;
+}
+
+function botAnswer(){
+  const inp = document.getElementById('chatInput').value.trim();
+  if(!inp) return;
+  const box = document.getElementById('chatArea');
+  const pu = document.createElement('p'); pu.className='user'; pu.innerHTML=`<b>You:</b> ${inp}`; box.appendChild(pu);
+  // simple parsing: look for numbers and keywords
+  const tokens = inp.toLowerCase();
+  let reply = "I can help with predictions, formulas, and race intuition. Try asking 'predict time if speed=5 and dist=100'.";
+  const m = inp.match(/speed\s*=?\s*([0-9.]+)/i);
+  const n = inp.match(/dist(?:ance)?\s*=?\s*([0-9.]+)/i);
+  const t = inp.match(/time\s*=?\s*([0-9.]+)/i);
+  if(m && n && tokens.includes('time')){
+    const s = parseFloat(m[1]), d = parseFloat(n[1]);
+    reply = `Time = Distance ÷ Speed = ${toFixedNum(d/s,3)} s.`;
+  } else if(m && t && tokens.includes('distance')){
+    const s = parseFloat(m[1]), tt = parseFloat(t[1]);
+    reply = `Distance = Speed × Time = ${toFixedNum(s*tt,3)} m.`;
+  } else if(n && t && tokens.includes('speed')){
+    const d = parseFloat(n[1]), tt = parseFloat(t[1]);
+    reply = `Speed = Distance ÷ Time = ${toFixedNum(d/tt,3)} m/s (${toFixedNum((d/tt)*3.6,3)} km/h).`;
+  } else if(tokens.includes('overtake')){
+    reply = 'Overtake happens when the distance-time graphs cross. In simulation, look for the mark on the track and intersection on the graph.';
+  } else if(tokens.includes('area') && tokens.includes('speed')){
+    reply = 'Area under speed-time graph over an interval equals distance covered in that interval.';
+  }
+  const pb = document.createElement('p'); pb.className='bot'; pb.innerHTML=`<b>Bot:</b> ${reply}`;
+  box.appendChild(pb); box.scrollTop = box.scrollHeight;
+  document.getElementById('chatInput').value='';
+}
+
+/* ============================
+  Local progress save (basic)
+   ============================ */
+function saveProgress(data){
+  const hist = JSON.parse(localStorage.getItem('sdt_history')||'[]');
+  hist.push({...data, ts: new Date().toISOString()});
+  localStorage.setItem('sdt_history', JSON.stringify(hist.slice(-30)));
+  renderProgress();
+}
+function renderProgress(){
+  const hist = JSON.parse(localStorage.getItem('sdt_history')||'[]');
+  const box = document.getElementById('progressBox');
+  if(hist.length===0){ box.textContent='No results yet.'; return; }
+  box.innerHTML = `<ul style="padding-left:16px;margin:6px 0">${hist.slice(-6).reverse().map(it=>`<li>${it.ts.split('T')[0]} · ${it.mode} · ${JSON.stringify((function(){let t={}; for(let k in it) if(k!=='ts') t[k]=it[k]; return t})())}</li>`).join('')}</ul>`;
+}
+
+/* ============================
+  Initialization
+   ============================ */
+window.addEventListener('load', ()=>{
+  initFoundationCharts();
+  updateFoundationStats();
+  initComparativeCharts();
+  renderProgress();
+  // wire formula discovery default hiding logic
+  hideVar.onchange = ()=>{
+    const hv = hideVar.value;
+    speedD.disabled = (hv==='speed');
+    distD.disabled = (hv==='distance');
+    timeD.disabled = (hv==='time');
+    feedbackBox.textContent=''; predictInput.value='';
+  };
+});
+</script>
+</body>
+</html>

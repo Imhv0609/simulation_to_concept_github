@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Speed-Distance-Time Adventure</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: linear-gradient(to bottom, #e0f7fa, #ffffff);
+  }
+  h1 { text-align: center; margin-top: 20px; }
+  .tab-buttons {
+    text-align: center;
+    margin: 20px;
+  }
+  button {
+    padding: 10px 15px;
+    margin: 5px;
+    border: none;
+    background: #0288d1;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .tab-content { display: none; text-align: center; }
+  .active { display: block; }
+  canvas {
+    border: 1px solid #333;
+    background: #f7f7f7;
+    display: block;
+    margin: 20px auto;
+  }
+  #story-panel {
+    position: fixed;
+    right: 20px;
+    top: 80px;
+    width: 250px;
+    background: rgba(255,255,255,0.9);
+    padding: 15px;
+    border: 2px solid #0288d1;
+    border-radius: 8px;
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+  }
+  #aha-message {
+    display: none;
+    position: fixed;
+    top: 40%;
+    left: 40%;
+    background: #ffeb3b;
+    padding: 20px;
+    border-radius: 10px;
+    font-weight: bold;
+    animation: fade 2s ease-in-out;
+  }
+  @keyframes fade {
+    from {opacity: 1;} to {opacity: 0;}
+  }
+</style>
+</head>
+<body>
+
+<h1>Speed, Distance & Time Adventure</h1>
+<div class="tab-buttons">
+  <button onclick="openTab('concept1')">Concept 1: Speed</button>
+  <button onclick="openTab('concept2')">Concept 2: Distance</button>
+  <button onclick="openTab('concept3')">Concept 3: Time</button>
+</div>
+
+<div id="story-panel">
+  <h3>Story Mode</h3>
+  <p id="story-text">Welcome, Explorer! Begin your journey by selecting a concept tab.</p>
+</div>
+
+<div id="aha-message">Aha! You discovered something new!</div>
+
+<div id="concept1" class="tab-content">
+  <h2>Understanding Speed</h2>
+  <p>Adjust speed and see how fast the object travels in 5 seconds.</p>
+  <input type="range" min="10" max="100" value="50" id="speedRange" oninput="updateSpeed()">
+  <label id="speedLabel">Speed: 50 units/sec</label>
+  <canvas id="canvas1" width="400" height="200"></canvas>
+</div>
+
+<div id="concept2" class="tab-content">
+  <h2>Exploring Distance</h2>
+  <p>Set speed and time to see how distance changes.</p>
+  <input type="range" min="10" max="100" value="40" id="speedRange2" oninput="updateDistance()">
+  <label id="speedLabel2">Speed: 40 units/sec</label><br>
+  <input type="range" min="1" max="10" value="5" id="timeRange2" oninput="updateDistance()">
+  <label id="timeLabel2">Time: 5 sec</label>
+  <canvas id="canvas2" width="400" height="200"></canvas>
+</div>
+
+<div id="concept3" class="tab-content">
+  <h2>Calculating Time</h2>
+  <p>Set distance and speed to see how long it takes to travel.</p>
+  <input type="range" min="100" max="500" value="300" id="distanceRange3" oninput="updateTime()">
+  <label id="distanceLabel3">Distance: 300 units</label><br>
+  <input type="range" min="10" max="100" value="60" id="speedRange3" oninput="updateTime()">
+  <label id="speedLabel3">Speed: 60 units/sec</label>
+  <canvas id="canvas3" width="400" height="200"></canvas>
+</div>
+
+<script>
+function openTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+  document.getElementById(tabId).style.display = 'block';
+  let textMap = {
+    concept1: "Chapter 1: You are racing a car. Discover how changing speed affects movement!",
+    concept2: "Chapter 2: Measure the journey! See how distance depends on speed and time.",
+    concept3: "Chapter 3: Timing is everything. Calculate how long to reach your goal!"
+  };
+  document.getElementById("story-text").innerText = textMap[tabId];
+  showAha();
+}
+
+// Aha Popup
+function showAha(){
+  let aha = document.getElementById("aha-message");
+  aha.style.display = "block";
+  setTimeout(() => aha.style.display = "none", 2000);
+}
+
+// Concept 1 Animation
+let ctx1 = document.getElementById('canvas1').getContext('2d');
+let speed1 = 50, pos1 = 10;
+function updateSpeed(){
+  speed1 = document.getElementById('speedRange').value;
+  document.getElementById('speedLabel').innerText = `Speed: ${speed1} units/sec`;
+}
+function animate1(){
+  ctx1.clearRect(0,0,400,200);
+  ctx1.fillStyle = "red";
+  ctx1.fillRect(pos1, 80, 20, 20);
+  pos1 += speed1/50;
+  if(pos1 > 400) pos1 = 0;
+  requestAnimationFrame(animate1);
+}
+animate1();
+
+// Concept 2
+let ctx2 = document.getElementById('canvas2').getContext('2d');
+function updateDistance(){
+  let s = document.getElementById('speedRange2').value;
+  let t = document.getElementById('timeRange2').value;
+  document.getElementById('speedLabel2').innerText = `Speed: ${s} units/sec`;
+  document.getElementById('timeLabel2').innerText = `Time: ${t} sec`;
+  let d = s * t;
+  ctx2.clearRect(0,0,400,200);
+  ctx2.fillStyle = "blue";
+  ctx2.fillRect(10, 80, d/5, 20); 
+}
+updateDistance();
+
+// Concept 3
+let ctx3 = document.getElementById('canvas3').getContext('2d');
+function updateTime(){
+  let d = document.getElementById('distanceRange3').value;
+  let s = document.getElementById('speedRange3').value;
+  document.getElementById('distanceLabel3').innerText = `Distance: ${d} units`;
+  document.getElementById('speedLabel3').innerText = `Speed: ${s} units/sec`;
+  let t = d / s;
+  ctx3.clearRect(0,0,400,200);
+  ctx3.fillStyle = "green";
+  ctx3.fillRect(10, 80, d/5, 20);
+  ctx3.fillText(`Time: ${t.toFixed(2)} sec`, 150, 150);
+}
+updateTime();
+</script>
+</body>
+</html>
