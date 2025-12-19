@@ -24,11 +24,20 @@ SIMULATIONS_DIR = PROJECT_ROOT / "SimulationsNCERT-main"
 # SERVER SETTINGS
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Port for simulation HTTP server
+# Port for simulation HTTP server (local only)
 SIMULATION_SERVER_PORT = 8000
 
-# Base URL for simulations (served via HTTP)
-SIMULATION_BASE_URL = f"http://localhost:{SIMULATION_SERVER_PORT}"
+# Detect if running on Streamlit Cloud
+IS_CLOUD = os.environ.get("STREAMLIT_SHARING_MODE") or os.environ.get("STREAMLIT_SERVER_HEADLESS")
+
+# GitHub Pages URL for cloud deployment
+GITHUB_PAGES_URL = "https://imhv0609.github.io/simulation_to_concept_github/SimulationsNCERT-main"
+
+# Base URL for simulations - use GitHub Pages in cloud, localhost locally
+if IS_CLOUD:
+    SIMULATION_BASE_URL = GITHUB_PAGES_URL
+else:
+    SIMULATION_BASE_URL = f"http://localhost:{SIMULATION_SERVER_PORT}"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # DEFAULT VALUES

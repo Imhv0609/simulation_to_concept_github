@@ -16,8 +16,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 sys.path.insert(0, str(PROJECT_ROOT / "frontend"))
 
-from sim_server import start_simulation_server
 import config
+
+# Only import and start local server if NOT on cloud
+if not config.IS_CLOUD:
+    from sim_server import start_simulation_server
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -33,11 +36,13 @@ st.set_page_config(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# START SIMULATION SERVER
+# START SIMULATION SERVER (LOCAL ONLY)
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Start HTTP server for simulations (runs once)
-start_simulation_server()
+# Start HTTP server for simulations only when running locally
+# On Streamlit Cloud, simulations are served from GitHub Pages
+if not config.IS_CLOUD:
+    start_simulation_server()
 
 
 # ═══════════════════════════════════════════════════════════════════════════

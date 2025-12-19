@@ -3,6 +3,7 @@ Configuration file for the teaching agent.
 This is the central place to control simulation behavior.
 """
 
+import os
 from typing import Dict, Literal
 
 # ============================================
@@ -15,6 +16,20 @@ SIMULATION_CONTROL_MODE: Literal["MANUAL", "AUTO"] = "AUTO"
 
 
 # ============================================
+# ENVIRONMENT DETECTION
+# ============================================
+# Detect if running on Streamlit Cloud
+IS_CLOUD = os.environ.get("STREAMLIT_SHARING_MODE") or os.environ.get("STREAMLIT_SERVER_HEADLESS")
+
+# Base URLs
+LOCAL_BASE_URL = "http://localhost:8000"
+GITHUB_PAGES_URL = "https://imhv0609.github.io/simulation_to_concept_github/SimulationsNCERT-main"
+
+# Use appropriate base URL
+BASE_URL = GITHUB_PAGES_URL if IS_CLOUD else LOCAL_BASE_URL
+
+
+# ============================================
 # SIMULATION URL MAPPINGS
 # ============================================
 # Map simulation names to their URLs
@@ -22,16 +37,16 @@ SIMULATION_CONTROL_MODE: Literal["MANUAL", "AUTO"] = "AUTO"
 # For AUTO mode: These should be hosted URLs that accept URL parameters
 
 SIMULATION_URLS: Dict[str, str] = {
-    # NCERT Simulations - Hosted on local HTTP server for AUTO mode
-    "fractions": "http://localhost:8000/fractions.html",
-    "acids_bases": "http://localhost:8000/acids%20bases.html",
-    "final_output": "http://localhost:8000/4_final_output.html",
-    "simple_pendulum": "http://localhost:8000/simple_pendulum.html",
-    "std": "http://localhost:8000/std.html",
-    "std1": "http://localhost:8000/std1.html",
-    "std2": "http://localhost:8000/std2.html",
-    "std3": "http://localhost:8000/std3.html",
-    "std4": "http://localhost:8000/std4.html",
+    # NCERT Simulations - Use appropriate base URL for environment
+    "fractions": f"{BASE_URL}/fractions.html",
+    "acids_bases": f"{BASE_URL}/acids%20bases.html",
+    "final_output": f"{BASE_URL}/4_final_output.html",
+    "simple_pendulum": f"{BASE_URL}/simple_pendulum.html",
+    "std": f"{BASE_URL}/std.html",
+    "std1": f"{BASE_URL}/std1.html",
+    "std2": f"{BASE_URL}/std2.html",
+    "std3": f"{BASE_URL}/std3.html",
+    "std4": f"{BASE_URL}/std4.html",
 }
 
 
