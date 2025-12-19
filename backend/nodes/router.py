@@ -64,6 +64,8 @@ def router_node(state: TeachingState) -> Dict[str, Any]:
         print(f"   Last Interaction: {understanding_status.get('last_interaction_quality', 'N/A')}")
     
     # DECISION LOGIC
+    # Note: Confusion handling is done by feedback_node's teaching loop.
+    # Router only decides: continue teaching OR go to assessment.
     
     # Decision 1: All concepts taught?
     if current_index >= len(concepts):
@@ -73,18 +75,10 @@ def router_node(state: TeachingState) -> Dict[str, Any]:
         print(f"   Reason: {reason}")
         print(f"   Next: Generate MCQ questions and test student understanding")
     
-    # Decision 2: Student confused?
-    elif understanding_status.get("is_confused", False):
-        next_action = "re-explain"
-        reason = "Student is showing signs of confusion. Need to provide feedback and re-explanation."
-        print(f"\n🔄 Decision: RE-EXPLAIN")
-        print(f"   Reason: {reason}")
-        print(f"   Next: Provide feedback and simplify explanation")
-    
-    # Decision 3: Normal flow
+    # Decision 2: More concepts to teach
     else:
         next_action = "plan"
-        reason = "Student is progressing well. Continue with normal teaching flow."
+        reason = "Continue with next concept."
         print(f"\n➡️  Decision: PLAN")
         print(f"   Reason: {reason}")
         
@@ -93,8 +87,6 @@ def router_node(state: TeachingState) -> Dict[str, Any]:
             current_concept = concepts[current_index]
             print(f"   Next Concept: '{current_concept.get('name', 'Unknown')}'")
             print(f"   Next: Generate lesson plan with takeaways and probing questions")
-        else:
-            print(f"   Next: Plan next teaching iteration")
     
     print("\n" + "="*60)
     print(f"🎯 ROUTING COMPLETE: next_action = '{next_action}'")

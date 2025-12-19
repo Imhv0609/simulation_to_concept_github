@@ -11,7 +11,7 @@ from typing import Dict, Literal
 # Change this single parameter to switch between AUTO and MANUAL modes globally
 # - "MANUAL": Student manually changes parameters (works with existing HTML files)
 # - "AUTO": Agent programmatically controls parameters (requires hosted simulations with URL params)
-SIMULATION_CONTROL_MODE: Literal["MANUAL", "AUTO"] = "MANUAL"
+SIMULATION_CONTROL_MODE: Literal["MANUAL", "AUTO"] = "AUTO"
 
 
 # ============================================
@@ -22,18 +22,16 @@ SIMULATION_CONTROL_MODE: Literal["MANUAL", "AUTO"] = "MANUAL"
 # For AUTO mode: These should be hosted URLs that accept URL parameters
 
 SIMULATION_URLS: Dict[str, str] = {
-    # NCERT Simulations (Local - for MANUAL mode)
-    "fractions": "../SimulationsNCERT-main/fractions.html",
-    "acids_bases": "../SimulationsNCERT-main/acids bases.html",
-    "std": "../SimulationsNCERT-main/std.html",
-    "std1": "../SimulationsNCERT-main/std1.html",
-    "std2": "../SimulationsNCERT-main/std2.html",
-    "std3": "../SimulationsNCERT-main/std3.html",
-    "std4": "../SimulationsNCERT-main/std4.html",
-    
-    # Future: Add hosted URLs here for AUTO mode
-    # "fractions_hosted": "https://your-domain.com/simulations/fractions?param1={value1}&param2={value2}",
-    # "acids_bases_hosted": "https://your-domain.com/simulations/acids_bases?param1={value1}",
+    # NCERT Simulations - Hosted on local HTTP server for AUTO mode
+    "fractions": "http://localhost:8000/fractions.html",
+    "acids_bases": "http://localhost:8000/acids%20bases.html",
+    "final_output": "http://localhost:8000/4_final_output.html",
+    "simple_pendulum": "http://localhost:8000/simple_pendulum.html",
+    "std": "http://localhost:8000/std.html",
+    "std1": "http://localhost:8000/std1.html",
+    "std2": "http://localhost:8000/std2.html",
+    "std3": "http://localhost:8000/std3.html",
+    "std4": "http://localhost:8000/std4.html",
 }
 
 

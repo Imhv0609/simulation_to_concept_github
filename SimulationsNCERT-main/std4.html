@@ -233,6 +233,73 @@
     const setText=(id,txt)=>{ document.getElementById(id).textContent = txt }
     const toFixed=(v,n=2)=> parseFloat(v).toFixed(n)
 
+    /* ------------------------
+       URL Parameter Control (AUTO MODE)
+       ------------------------ */
+    // Read URL parameters for AUTO mode
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    function applyURLParameters() {
+      // Check if we have URL parameters (AUTO mode)
+      if (urlParams.toString().length === 0) {
+        return; // MANUAL mode - no parameters
+      }
+      
+      // AUTO MODE: Apply parameters from URL
+      // Expected parameters: speedR, speedA, time, distance, tab
+      
+      if (urlParams.has('speedR')) {
+        const speedR = parseFloat(urlParams.get('speedR'));
+        if (!isNaN(speedR) && speedR >= 0.5 && speedR <= 30) {
+          const elem = document.getElementById('spdR_D_range');
+          if (elem) {
+            elem.value = speedR;
+            updateDistanceUI();
+          }
+        }
+      }
+      
+      if (urlParams.has('speedA')) {
+        const speedA = parseFloat(urlParams.get('speedA'));
+        if (!isNaN(speedA) && speedA >= 0.5 && speedA <= 30) {
+          const elem = document.getElementById('spdA_D_range');
+          if (elem) {
+            elem.value = speedA;
+            updateDistanceUI();
+          }
+        }
+      }
+      
+      if (urlParams.has('time')) {
+        const time = parseInt(urlParams.get('time'));
+        if (!isNaN(time) && time >= 1 && time <= 20) {
+          const elem = document.getElementById('timeWindow_D_range');
+          if (elem) {
+            elem.value = time;
+            updateDistanceUI();
+          }
+        }
+      }
+      
+      if (urlParams.has('distance')) {
+        const distance = parseInt(urlParams.get('distance'));
+        if (!isNaN(distance) && distance >= 50 && distance <= 500) {
+          const elem = document.getElementById('fixedDist_S_range');
+          if (elem) {
+            elem.value = distance;
+            updateSpeedUI();
+          }
+        }
+      }
+      
+      if (urlParams.has('tab')) {
+        const tab = urlParams.get('tab');
+        if (tab === 'Distance' || tab === 'Speed' || tab === 'Formula') {
+          activateTab(tab);
+        }
+      }
+    }
+
     // Tab switching
     document.getElementById('tabDistance').onclick = ()=>{ activateTab('Distance') }
     document.getElementById('tabSpeed').onclick = ()=>{ activateTab('Speed') }
@@ -487,6 +554,11 @@
     window.addEventListener('load', ()=>{
       activateTab('Distance')
       initChartD(); initChartS(); renderProgress()
+      
+      // Apply URL parameters if present (AUTO MODE)
+      setTimeout(() => {
+        applyURLParameters();
+      }, 100);
     })
 
     // tiny UX: press Enter in predict inputs triggers check

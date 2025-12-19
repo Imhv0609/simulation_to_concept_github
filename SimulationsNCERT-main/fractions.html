@@ -91,6 +91,37 @@
     const randomize = document.getElementById('randomize');
     const reset = document.getElementById('reset');
 
+    /* ---------- URL Parameter Control (AUTO MODE) ---------- */
+    // Read URL parameters for AUTO mode
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    function applyURLParameters() {
+      // Check if we have URL parameters (AUTO mode)
+      if (urlParams.toString().length === 0) {
+        return; // MANUAL mode - no parameters
+      }
+      
+      // AUTO MODE: Apply parameters from URL
+      // Expected parameters: numerator, denominator
+      
+      if (urlParams.has('denominator')) {
+        const denomValue = parseInt(urlParams.get('denominator'));
+        if (!isNaN(denomValue) && denomValue >= 1 && denomValue <= 12) {
+          denom.value = denomValue;
+        }
+      }
+      
+      if (urlParams.has('numerator')) {
+        const numValue = parseInt(urlParams.get('numerator'));
+        if (!isNaN(numValue) && numValue >= 0 && numValue <= parseInt(denom.value)) {
+          num.value = numValue;
+        }
+      }
+      
+      // Update the UI with the new values
+      updateUI();
+    }
+
     // Utility: Greatest Common Divisor
     function gcd(a,b){ a = Math.abs(a); b = Math.abs(b); while(b){ let t = a % b; a = b; b = t; } return a }
 
@@ -222,6 +253,11 @@
       const target = 520; // default pixel size
       canvas.style.width = target + 'px'; canvas.style.height = target + 'px';
       fixDPI();
+      
+      // Apply URL parameters if present (AUTO MODE)
+      setTimeout(() => {
+        applyURLParameters();
+      }, 100);
     })();
 
     window.addEventListener('resize', () => { fixDPI(); });

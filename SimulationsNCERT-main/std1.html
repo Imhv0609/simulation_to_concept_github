@@ -96,6 +96,43 @@
 let anim1, anim3;
 let pos1=0, pos3a=0, pos3b=0;
 
+/* ---------- URL Parameter Control (AUTO MODE) ---------- */
+// Read URL parameters for AUTO mode
+const urlParams = new URLSearchParams(window.location.search);
+
+function applyURLParameters() {
+  // Check if we have URL parameters (AUTO mode)
+  if (urlParams.toString().length === 0) {
+    return; // MANUAL mode - no parameters
+  }
+  
+  // AUTO MODE: Apply parameters from URL
+  // Expected parameters: speed, distance, tab
+  
+  if (urlParams.has('speed')) {
+    const speedParam = parseInt(urlParams.get('speed'));
+    if (!isNaN(speedParam) && speedParam >= 1 && speedParam <= 20) {
+      document.getElementById('speed1').value = speedParam;
+      document.getElementById('speedVal1').textContent = speedParam;
+    }
+  }
+  
+  if (urlParams.has('distance')) {
+    const distanceParam = parseInt(urlParams.get('distance'));
+    if (!isNaN(distanceParam) && distanceParam >= 50 && distanceParam <= 300) {
+      document.getElementById('dist1').value = distanceParam;
+      document.getElementById('distVal1').textContent = distanceParam;
+    }
+  }
+  
+  if (urlParams.has('tab')) {
+    const tabParam = parseInt(urlParams.get('tab'));
+    if (!isNaN(tabParam) && tabParam >= 1 && tabParam <= 3) {
+      switchTab(tabParam);
+    }
+  }
+}
+
 // Tab switching
 function switchTab(tab) {
   document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
@@ -170,6 +207,13 @@ function sendMsg(){
   document.getElementById('chatInput').value='';
   box.scrollTop=box.scrollHeight;
 }
+
+// Apply URL parameters if present (AUTO MODE)
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    applyURLParameters();
+  }, 100);
+});
 </script>
 
 </body>

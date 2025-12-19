@@ -117,6 +117,7 @@ class TeachingState(TypedDict):
     # ===== SIMULATION DETAILS (populated by ingestion node) =====
     simulation_url: str  # Full URL/path to simulation HTML
     simulation_params: Dict[str, SimulationParameter]  # Parsed parameters
+    simulation_buttons: List[Dict[str, str]]  # Extracted buttons [{id, label, type}]
     control_mode: ControlMode  # AUTO or MANUAL
     
     # ===== EXTRACTED CONCEPTS (populated by concept extractor) =====
@@ -126,6 +127,7 @@ class TeachingState(TypedDict):
     # ===== LESSON PLAN (populated by planner) =====
     takeaways: List[Takeaway]  # Lesson plan for current concept
     current_takeaway_index: int
+    re_explain_count: int  # Track re-explanation attempts (for loop safety)
     
     # ===== DISPLAY CONTROL =====
     view_config: ViewConfig
@@ -135,9 +137,13 @@ class TeachingState(TypedDict):
     understanding_status: UnderstandingStatus
     
     # ===== ASSESSMENT =====
-    assessment: Optional[Assessment]
+    mcqs: List[MCQ]  # Generated MCQ questions
+    current_mcq_index: int  # Which MCQ we're on
+    student_answers: List[int]  # Student's answers (indices)
+    assessment: Optional[Assessment]  # Final assessment results
     
     # ===== CONTROL/MESSAGING =====
     messages: List[str]  # Agent messages to display
+    feedback_message: Optional[str]  # Feedback from feedback node
     next_action: str  # What to do next
     error: Optional[str]  # Error message if any

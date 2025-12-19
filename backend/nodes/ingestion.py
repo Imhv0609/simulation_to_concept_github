@@ -20,7 +20,8 @@ from dotenv import load_dotenv
 import json
 
 from state import TeachingState
-import config
+# Import backend config with absolute path to avoid conflicts
+from backend import config as backend_config
 
 # Load environment variables
 load_dotenv()
@@ -50,10 +51,18 @@ def simulation_ingest_node(state: TeachingState) -> Dict[str, Any]:
     if not sim_name:
         raise ValueError("simulation_name is required in state")
     
+    print(f"🔍 DEBUG: simulation_name = '{sim_name}' (type: {type(sim_name).__name__})")
+    print(f"🔍 DEBUG: simulation_name repr = {repr(sim_name)}")
+    print(f"🔍 DEBUG: Available simulations = {list(backend_config.SIMULATION_URLS.keys())}")
+    
     # Get simulation URL from config
     try:
-        sim_url = config.get_simulation_url(sim_name)
+        sim_url = backend_config.get_simulation_url(sim_name)
+        print(f"✅ Found URL: {sim_url}")
     except ValueError as e:
+        print(f"❌ ValueError: {e}")
+        print(f"🔍 Checking if '{sim_name}' in SIMULATION_URLS...")
+        print(f"🔍 Result: {sim_name in backend_config.SIMULATION_URLS}")
         raise ValueError(f"Error loading simulation: {e}")
     
     # Get learner profile
@@ -66,8 +75,8 @@ def simulation_ingest_node(state: TeachingState) -> Dict[str, Any]:
     print(f"👤 Learner: Level={learner['level']}, Calibre={learner['calibre']}")
     
     # Determine control mode from config (the "clipper" parameter)
-    control_mode = config.SIMULATION_CONTROL_MODE
-    mode_config = config.get_current_mode_config()
+    control_mode = backend_config.SIMULATION_CONTROL_MODE
+    mode_config = backend_config.get_current_mode_config()
     
     print(f"\n🎛️  Control Mode: {control_mode}")
     print(f"   - Can modify params: {mode_config['can_modify_params']}")
@@ -130,27 +139,73 @@ def simulation_parser_node(state: TeachingState) -> Dict[str, Any]:
     print(f"📄 Parsing HTML: {sim_url}")
     
     # Read the HTML file
+    html_content = None
     try:
+        # Check if URL is HTTP/HTTPS
+        if sim_url.startswith("http://") or sim_url.startswith("https://"):
+            # Fetch from HTTP server
+            import urllib.request
+            from urllib.parse import unquote
+            
+            print(f"🌐 Fetching from HTTP: {sim_url}")
+            
+            try:
+                with urllib.request.urlopen(sim_url, timeout=5) as response:
+                    html_content = response.read().decode('utf-8')
+                print(f"✅ Successfully fetched HTML ({len(html_content)} chars)")
+            except urllib.error.URLError as e:
+                print(f"⚠️  Could not fetch from HTTP: {e}")
+                # Try to read from local file as fallback
+                # Extract filename from URL
+                from urllib.parse import urlparse
+                parsed = urlparse(sim_url)
+                filename = unquote(parsed.path.lstrip('/'))
+                
+                # Try to find file in SimulationsNCERT-main folder
+                backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                project_root = os.path.dirname(backend_dir)
+                local_path = os.path.join(project_root, "SimulationsNCERT-main", filename)
+                
+                print(f"🔄 Trying local fallback: {local_path}")
+                
+                if os.path.exists(local_path):
+                    with open(local_path, 'r', encoding='utf-8') as f:
+                        html_content = f.read()
+                    print(f"✅ Read from local file")
+                else:
+                    print(f"⚠️  Local file not found either")
+                    return {"simulation_params": {}}
+        
         # Handle relative paths from project root
-        if sim_url.startswith("../"):
-            # Get the backend directory
+        elif sim_url.startswith("../"):
             backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            # Go up one more level to reach project root
             project_root = os.path.dirname(backend_dir)
-            # Resolve the relative path
             html_path = os.path.join(project_root, sim_url.replace("../", ""))
+            
+            print(f"📂 Reading file: {html_path}")
+            
+            if not os.path.exists(html_path):
+                print(f"⚠️  File not found: {html_path}")
+                return {"simulation_params": {}}
+            
+            with open(html_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+        
+        # Handle absolute paths
         else:
             html_path = sim_url
+            print(f"📂 Reading file: {html_path}")
             
-        print(f"📂 Reading file: {html_path}")
+            if not os.path.exists(html_path):
+                print(f"⚠️  File not found: {html_path}")
+                return {"simulation_params": {}}
+            
+            with open(html_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
         
-        if not os.path.exists(html_path):
-            print(f"⚠️  File not found: {html_path}")
-            print("   Returning empty parameters")
+        if not html_content:
+            print("⚠️  No HTML content loaded")
             return {"simulation_params": {}}
-        
-        with open(html_path, 'r', encoding='utf-8') as f:
-            html_content = f.read()
             
     except Exception as e:
         print(f"❌ Error reading HTML file: {e}")
@@ -229,6 +284,29 @@ def simulation_parser_node(state: TeachingState) -> Dict[str, Any]:
         }
         param_count += 1
     
+    # 6. Extract buttons (for simulation workflow understanding)
+    buttons = []
+    for button_elem in soup.find_all('button'):
+        button_id = button_elem.get('id', '')
+        button_text = button_elem.get_text(strip=True)
+        if button_id or button_text:
+            buttons.append({
+                "id": button_id,
+                "label": button_text,
+                "type": "button"
+            })
+    
+    # Also check for input type="button" and input type="submit"
+    for input_elem in soup.find_all('input', {'type': ['button', 'submit']}):
+        button_id = input_elem.get('id') or input_elem.get('name') or ''
+        button_text = input_elem.get('value', '')
+        if button_id or button_text:
+            buttons.append({
+                "id": button_id,
+                "label": button_text,
+                "type": input_elem.get('type')
+            })
+    
     print(f"\n📊 Extracted Parameters:")
     print(f"   • Total parameters found: {len(params)}")
     
@@ -240,8 +318,17 @@ def simulation_parser_node(state: TeachingState) -> Dict[str, Any]:
     else:
         print("   • No interactive parameters found in HTML")
     
+    if buttons:
+        print(f"\n🔘 Extracted Buttons:")
+        print(f"   • Total buttons found: {len(buttons)}")
+        for btn in buttons[:3]:
+            print(f"   • {btn['label']} (id: {btn['id']})")
+        if len(buttons) > 3:
+            print(f"   • ... and {len(buttons) - 3} more")
+    
     return {
         "simulation_params": params,
+        "simulation_buttons": buttons,
     }
 
 

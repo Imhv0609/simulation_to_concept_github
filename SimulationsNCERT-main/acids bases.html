@@ -452,11 +452,80 @@ function addAha(text){
   document.getElementById('ahaList').textContent = ahaEvents.join(' | ')
 }
 
+/* ---------- URL Parameter Control (AUTO MODE) ---------- */
+// Read URL parameters for AUTO mode
+const urlParams = new URLSearchParams(window.location.search);
+
+function applyURLParameters() {
+  // Check if we have URL parameters (AUTO mode)
+  if (urlParams.toString().length === 0) {
+    return; // MANUAL mode - no parameters
+  }
+  
+  // AUTO MODE: Apply parameters from URL
+  // Accepts both friendly names (pH, volume) and element IDs (phSlider, beakerVolume)
+  
+  // pH parameter - accepts 'pH' or 'phSlider'
+  const pHValue = urlParams.get('pH') || urlParams.get('phSlider');
+  if (pHValue !== null) {
+    const pH = parseFloat(pHValue);
+    if (!isNaN(pH) && pH >= 0 && pH <= 14) {
+      phSlider.value = pH;
+      // Trigger the input event to update the simulation
+      phSlider.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+  
+  // Volume parameter - accepts 'volume' or 'beakerVolume'
+  const volumeValue = urlParams.get('volume') || urlParams.get('beakerVolume');
+  if (volumeValue !== null) {
+    const volume = parseInt(volumeValue);
+    if (!isNaN(volume) && volume > 0) {
+      beakerVolume.value = volume;
+      // Trigger the input event to update the simulation
+      beakerVolume.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+  
+  // Type parameter - accepts 'type' or 'addType'
+  const typeValue = urlParams.get('type') || urlParams.get('addType');
+  if (typeValue !== null) {
+    if (typeValue === 'acid' || typeValue === 'base') {
+      addType.value = typeValue;
+    }
+  }
+  
+  // Concentration parameter - accepts 'conc' or 'addConc'
+  const concValue = urlParams.get('conc') || urlParams.get('addConc');
+  if (concValue !== null) {
+    const conc = parseFloat(concValue);
+    if (!isNaN(conc) && conc > 0) {
+      addConc.value = conc;
+    }
+  }
+  
+  // Drop volume parameter - accepts 'drop' or 'dropVol'
+  const dropValue = urlParams.get('drop') || urlParams.get('dropVol');
+  if (dropValue !== null) {
+    const drop = parseFloat(dropValue);
+    if (!isNaN(drop) && drop > 0) {
+      dropVol.value = drop;
+    }
+  }
+  
+  console.log('AUTO MODE: Applied URL parameters', Object.fromEntries(urlParams));
+}
+
 /* ---------- Init ---------- */
 window.addEventListener('load', ()=>{
   // set initial beaker as pure water
   beaker = { volume_mL: Number(beakerVolume.value), H_moles_total: 0, OH_moles_total: 0 }
   updateFromState('init')
+  
+  // Apply URL parameters if present (AUTO MODE)
+  setTimeout(() => {
+    applyURLParameters();
+  }, 100);
 })
 </script>
 </body>

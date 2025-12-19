@@ -71,6 +71,7 @@ def planner_node(state: TeachingState) -> Dict[str, Any]:
     current_concept = concepts[current_index]
     learner_profile = state.get("learner_profile", {})
     simulation_params = state.get("simulation_params", {})
+    simulation_buttons = state.get("simulation_buttons", [])
     control_mode = state.get("control_mode", "MANUAL")
     
     # Display planning context
@@ -82,6 +83,7 @@ def planner_node(state: TeachingState) -> Dict[str, Any]:
     print(f"   Calibre: {learner_profile.get('calibre', 'Unknown')}")
     print(f"\n🎛️  Control Mode: {control_mode}")
     print(f"   Available Parameters: {len(simulation_params)}")
+    print(f"   Available Buttons: {len(simulation_buttons)}")
     
     # Initialize LLM
     print(f"\n🤖 Initializing LLM...")
@@ -102,6 +104,7 @@ def planner_node(state: TeachingState) -> Dict[str, Any]:
         concept=current_concept,
         learner_profile=learner_profile,
         simulation_params=simulation_params,
+        simulation_buttons=simulation_buttons,
         control_mode=control_mode
     )
     
@@ -129,6 +132,7 @@ def planner_node(state: TeachingState) -> Dict[str, Any]:
         for i, takeaway in enumerate(takeaways, 1):
             print(f"   {i}. {takeaway.get('explanation', 'N/A')[:80]}...")
             print(f"      Parameters: {takeaway.get('parameters_to_vary', [])}")
+            print(f"      Param Values: {takeaway.get('parameter_values', {})}")  # Debug: Show actual values
             print(f"      Display: {takeaway.get('display_mode', 'single')}")
         
         print("\n" + "="*60)
@@ -162,6 +166,7 @@ def build_planner_prompt(
     concept: Dict[str, Any],
     learner_profile: Dict[str, str],
     simulation_params: Dict[str, Any],
+    simulation_buttons: List[Dict[str, str]],
     control_mode: str
 ) -> str:
     """
@@ -171,6 +176,7 @@ def build_planner_prompt(
         concept: The concept to teach
         learner_profile: Student's level and calibre
         simulation_params: Available simulation parameters
+        simulation_buttons: Available buttons in the simulation
         control_mode: MANUAL or AUTO
         
     Returns:
@@ -190,6 +196,16 @@ def build_planner_prompt(
             param_list.append(f"- {param_name} ({param_type})")
     
     params_text = "\n".join(param_list) if param_list else "No parameters available"
+    
+    # Format buttons for prompt
+    button_list = []
+    for btn in simulation_buttons:
+        btn_id = btn.get('id', '')
+        btn_label = btn.get('label', '')
+        if btn_label:
+            button_list.append(f"- \"{btn_label}\" button" + (f" (id: {btn_id})" if btn_id else ""))
+    
+    buttons_text = "\n".join(button_list) if button_list else "No action buttons"
     
     # Adapt complexity based on student level
     level = learner_profile.get('level', 'Beginner')
@@ -232,9 +248,31 @@ Instead, provide clear instructions like "Increase the concentration slider" or 
 """
     else:  # AUTO
         mode_instruction = """
-The system is in AUTO mode - parameters will be set automatically.
-Include specific parameter values in your takeaways.
-For example: "acid_concentration": 0.5 or "substance_type": "acid"
+The system is in AUTO mode - parameters will be set automatically via URL.
+YOU MUST INCLUDE "parameter_values" FOR EVERY TAKEAWAY!
+
+CRITICAL RULE - Parameter values REQUIRED for ALL display modes:
+
+For "single" display mode:
+  "parameter_values": {"lengthSlider": 5.0, "autoStart": true}
+
+For "before_after" display mode - YOU MUST PROVIDE ALL THREE:
+  "parameter_values": {"lengthSlider": 8.0, "autoStart": true},  // The 'after' value
+  "before_state": {"lengthSlider": 3.0, "autoStart": true},      // State before the change
+  "after_state": {"lengthSlider": 8.0, "autoStart": true}        // State after the change
+
+🚀 AUTO-START REQUIREMENT:
+ALWAYS include "autoStart": true in parameter_values, before_state, and after_state!
+This makes the simulation automatically start/run after setting parameters.
+Without autoStart, the student would need to manually click the Start button.
+
+EXAMPLE VALUES for phSlider (acids/bases):
+- Acidic:  phSlider = 1.0 to 6.0
+- Neutral: phSlider = 7.0
+- Basic:   phSlider = 8.0 to 14.0
+
+If the simulation won't change, "parameter_values" is EMPTY - that's a BUG!
+Always provide specific numeric values for the parameters.
 """
     
     prompt = f"""You are an expert teacher creating a lesson plan to teach a scientific concept using an interactive simulation.
@@ -243,6 +281,26 @@ CONCEPT TO TEACH:
 Name: {concept.get('name', 'Unknown')}
 Description: {concept.get('description', 'No description')}
 Importance: {concept.get('importance', 'medium')}
+
+⚠️ CRITICAL: Your takeaways MUST focus specifically on "{concept.get('name', 'Unknown')}"!
+- Do NOT repeat basic concepts like "pH 7 is neutral" or "acids lower pH" unless this IS the concept being taught
+- Each takeaway must directly relate to the concept name above
+- If the concept is about "Volume's Impact" - focus on VOLUME
+- If the concept is about "Concentration" - focus on CONCENTRATION
+- Generate UNIQUE content for THIS specific concept
+
+🎯 PARAMETER SELECTION - VERY IMPORTANT:
+Use the RELEVANT parameter for each concept, not just phSlider!
+- For "Concentration" concepts → VARY addConc (e.g., show addConc=0.5 vs addConc=2.0)
+- For "Volume" concepts → VARY beakerVolume (e.g., show beakerVolume=100 vs beakerVolume=500)
+- For "Acid vs Base" concepts → VARY addType (acid vs base)
+- For "Drop size" concepts → VARY dropVol
+- For "Pendulum length" concepts → VARY lengthSlider
+- For "Speed/Time" concepts → VARY rotationSpeed, revolutionSpeed, etc.
+
+The student learns better by ADJUSTING the relevant parameter and SEEING its effect!
+Example: To teach concentration, don't just show pH=2 vs pH=5.
+Instead, show: "With addConc=0.5, pH drops slowly" vs "With addConc=2.0, pH drops quickly"
 
 STUDENT PROFILE:
 - Level: {level}
@@ -257,40 +315,62 @@ ADAPTATION GUIDELINES:
 AVAILABLE SIMULATION PARAMETERS:
 {params_text}
 
+AVAILABLE BUTTONS/ACTIONS:
+{buttons_text}
+
+🔘 IMPORTANT - SIMULATION WORKFLOW:
+Some simulations require clicking buttons AFTER setting parameters to see the effect.
+- If there's a "Start" button → Student must click it to run the simulation
+- If there's an "Add Drop" button → Student must click it to add substances
+- If there's a "Reset" button → Student can use it to restart
+
+In your takeaway explanation, INCLUDE instructions about which buttons to click!
+Example: "Set the pendulum length to 8, then click 'Start' to observe the longer swing period."
+Example: "After setting the concentration, click 'Add Drop' to see the pH change."
+
 CONTROL MODE:
 {mode_instruction}
 
 YOUR TASK:
-Create a structured lesson plan with 2-3 "takeaways". Each takeaway is a mini-lesson that:
-1. Explains ONE specific aspect of the concept
-2. Specifies which simulation parameters to vary (choose from the list above)
+Create a structured lesson plan with 2-3 "takeaways" that are SPECIFIC to "{concept.get('name', 'Unknown')}".
+Each takeaway is a mini-lesson that:
+1. Explains ONE specific aspect of THIS concept (not generic basics)
+2. Specifies which simulation parameters to vary - USE THE RELEVANT PARAMETER for this concept!
 3. Defines display mode based on the type of demonstration:
    - "before_after": When showing parameter changes, comparisons, or cause-effect relationships
    - "single": Only when showing static states or introducing the simulation
-4. Includes a probing question to check student understanding
+4. Includes a probing question about THIS specific concept
 
 RETURN FORMAT (JSON array):
 [
   {{
     "id": 1,
     "explanation": "Clear explanation (2-3 sentences, keep concise)",
-    "parameters_to_vary": ["param1", "param2"],
-    "parameter_values": {{"param1": value1}},  // Only for AUTO mode, omit for MANUAL
-    "display_mode": "before_after",  // Use this when showing changes
-    "before_state": {{"param1": value1}},  // Only if display_mode is "before_after"
-    "after_state": {{"param1": value2}},   // Only if display_mode is "before_after"
-    "probing_question": "Question text without complex punctuation"
+    "parameters_to_vary": ["addConc"],
+    "parameter_values": {{"addConc": 0.5, "autoStart": true}},  // Use the RELEVANT parameter + autoStart!
+    "display_mode": "single",
+    "probing_question": "Question about THIS concept"
   }},
   {{
     "id": 2,
-    "explanation": "Another aspect (2-3 sentences)",
-    "parameters_to_vary": ["param3"],
+    "explanation": "Show the effect of changing the relevant parameter",
+    "parameters_to_vary": ["addConc"],
+    "parameter_values": {{"addConc": 2.0, "autoStart": true}},  // Higher concentration
     "display_mode": "before_after",
-    "before_state": {{"param3": value3}},
-    "after_state": {{"param3": value4}},
-    "probing_question": "Simple clear question"
+    "before_state": {{"addConc": 0.5, "autoStart": true}},  // Low concentration
+    "after_state": {{"addConc": 2.0, "autoStart": true}},   // High concentration - see the difference!
+    "probing_question": "What happens when concentration increases"
   }}
 ]
+
+EXAMPLE FOR DIFFERENT CONCEPTS:
+- For "Volume" concept: Use beakerVolume (100 vs 500) + autoStart: true
+- For "Concentration" concept: Use addConc (0.5 vs 2.0) + autoStart: true
+- For "Acid/Base" concept: Use addType (acid vs base) + autoStart: true
+- For basic pH concept: Use phSlider (7 vs 2 vs 12) + autoStart: true
+- For "Pendulum Length" concept: Use lengthSlider (3 vs 8) + autoStart: true
+
+🚀 REMEMBER: Always include "autoStart": true in parameter_values, before_state, and after_state!
 
 CRITICAL JSON FORMATTING RULES:
 - Keep all text in explanations and questions SHORT and SIMPLE
@@ -310,6 +390,12 @@ IMPORTANT:
 - Use "single" display only for static introductions or definitions
 - Probing questions should match the student's level
 - Keep explanations concise (2-3 sentences max)
+
+⚠️ FINAL CHECK: Before generating, ask yourself:
+- Am I varying the RELEVANT parameter for "{concept.get('name', 'Unknown')}"?
+- For concentration → addConc, for volume → beakerVolume, for acid/base → addType
+- Are my probing questions about THIS concept, not generic pH questions?
+- Did I include "autoStart": true in ALL parameter objects?
 
 Generate the lesson plan now as valid JSON:"""
     
@@ -366,6 +452,13 @@ def parse_takeaways(response_text: str) -> List[Dict[str, Any]]:
                 "after_state": takeaway.get("after_state"),
                 "probing_question": takeaway.get("probing_question", "Do you understand this concept?")
             }
+            
+            # FIX: If parameter_values is empty but we have after_state, use after_state
+            # This handles the case where LLM forgets to include parameter_values for before_after mode
+            if not validated_takeaway["parameter_values"] and validated_takeaway["after_state"]:
+                validated_takeaway["parameter_values"] = validated_takeaway["after_state"].copy()
+                print(f"   ⚡ Auto-filled parameter_values from after_state: {validated_takeaway['parameter_values']}")
+            
             validated_takeaways.append(validated_takeaway)
         
         return validated_takeaways

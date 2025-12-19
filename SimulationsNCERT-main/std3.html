@@ -103,6 +103,38 @@
 </div>
 
 <script>
+/* ---------- URL Parameter Control (AUTO MODE) ---------- */
+// Read URL parameters for AUTO mode
+const urlParams = new URLSearchParams(window.location.search);
+
+function applyURLParameters() {
+  // Check if we have URL parameters (AUTO mode)
+  if (urlParams.toString().length === 0) {
+    return; // MANUAL mode - no parameters
+  }
+  
+  // AUTO MODE: Apply parameters from URL
+  // Expected parameters: speed, tab
+  
+  if (urlParams.has('speed')) {
+    const speedParam = parseInt(urlParams.get('speed'));
+    if (!isNaN(speedParam) && speedParam >= 1 && speedParam <= 100) {
+      const speedRange = document.getElementById('speedRange');
+      if (speedRange) {
+        speedRange.value = speedParam;
+        updateSpeed();
+      }
+    }
+  }
+  
+  if (urlParams.has('tab')) {
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'concept1' || tabParam === 'concept2' || tabParam === 'concept3') {
+      openTab(tabParam);
+    }
+  }
+}
+
 function openTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
   document.getElementById(tabId).style.display = 'block';
@@ -167,6 +199,13 @@ function updateTime(){
   ctx3.fillText(`Time: ${t.toFixed(2)} sec`, 150, 150);
 }
 updateTime();
+
+// Apply URL parameters if present (AUTO MODE)
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    applyURLParameters();
+  }, 100);
+});
 </script>
 </body>
 </html>

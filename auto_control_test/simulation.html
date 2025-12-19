@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>pH Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+        .beaker {
+            width: 200px;
+            height: 250px;
+            border: 5px solid #555;
+            border-top: none;
+            border-radius: 0 0 30px 30px;
+            margin: 30px auto;
+            position: relative;
+            overflow: hidden;
+            background: rgba(255,255,255,0.1);
+        }
+        .liquid {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70%;
+            transition: background 0.3s;
+        }
+        .ph-display {
+            font-size: 72px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .ph-label {
+            font-size: 32px;
+            padding: 10px 30px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .acidic { background: #ff4444; }
+        .neutral { background: #44ff44; color: black; }
+        .basic { background: #aa44ff; }
+        
+        .params {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        .mode-badge {
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .auto-mode { background: #00ff88; color: black; }
+        .manual-mode { background: #ffaa00; color: black; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="mode-badge" id="modeBadge">LOADING...</div>
+        
+        <h1>🧪 pH Simulation</h1>
+        
+        <div class="beaker">
+            <div class="liquid" id="liquid"></div>
+        </div>
+        
+        <div class="ph-display" id="phDisplay">7.0</div>
+        <div class="ph-label neutral" id="phLabel">NEUTRAL</div>
+        
+        <div class="params" id="params"></div>
+    </div>
+
+    <script>
+        // READ URL PARAMETERS
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Get values from URL (or use defaults)
+        const pH = urlParams.has('pH') ? parseFloat(urlParams.get('pH')) : 7.0;
+        const volume = urlParams.has('volume') ? parseInt(urlParams.get('volume')) : 100;
+        const type = urlParams.has('type') ? urlParams.get('type') : 'neutral';
+        const conc = urlParams.has('conc') ? urlParams.get('conc') : 'medium';
+        
+        // Check if we're in AUTO mode (URL has parameters)
+        const isAutoMode = urlParams.toString().length > 0;
+        
+        // UPDATE DISPLAY
+        function updateSimulation() {
+            const liquid = document.getElementById('liquid');
+            const phDisplay = document.getElementById('phDisplay');
+            const phLabel = document.getElementById('phLabel');
+            const modeBadge = document.getElementById('modeBadge');
+            const paramsDiv = document.getElementById('params');
+            
+            // Set mode badge
+            if (isAutoMode) {
+                modeBadge.textContent = '🤖 AUTO MODE - Parameters from URL';
+                modeBadge.className = 'mode-badge auto-mode';
+            } else {
+                modeBadge.textContent = '👆 MANUAL MODE - Default values';
+                modeBadge.className = 'mode-badge manual-mode';
+            }
+            
+            // Set pH display
+            phDisplay.textContent = pH.toFixed(1);
+            
+            // Set color based on pH
+            let color, labelText, labelClass;
+            
+            if (pH < 5) {
+                color = '#ff4444';  // Red for acid
+                labelText = 'ACIDIC';
+                labelClass = 'ph-label acidic';
+            } else if (pH > 9) {
+                color = '#aa44ff';  // Purple for base
+                labelText = 'BASIC';
+                labelClass = 'ph-label basic';
+            } else {
+                color = '#44ff44';  // Green for neutral
+                labelText = 'NEUTRAL';
+                labelClass = 'ph-label neutral';
+            }
+            
+            liquid.style.background = color;
+            phLabel.textContent = labelText;
+            phLabel.className = labelClass;
+            phDisplay.style.color = color;
+            
+            // Show parameters
+            paramsDiv.innerHTML = `
+                <strong>Current Parameters:</strong><br><br>
+                pH = ${pH} | Volume = ${volume}mL | Type = ${type} | Concentration = ${conc}<br><br>
+                <strong>URL:</strong> ${window.location.href}
+            `;
+        }
+        
+        // Run on load
+        updateSimulation();
+    </script>
+</body>
+</html>

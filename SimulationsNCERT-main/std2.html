@@ -275,6 +275,74 @@ let distChartF=null, speedChartF=null;
 let distChartC=null, speedChartC=null;
 
 /* ============================
+  URL Parameter Control (AUTO MODE)
+   ============================ */
+// Read URL parameters for AUTO mode
+const urlParams = new URLSearchParams(window.location.search);
+
+function applyURLParameters() {
+  // Check if we have URL parameters (AUTO mode)
+  if (urlParams.toString().length === 0) {
+    return; // MANUAL mode - no parameters
+  }
+  
+  // AUTO MODE: Apply parameters from URL
+  // Expected parameters: speed, distance, tab, speedA, speedB, raceDist
+  
+  if (urlParams.has('speed')) {
+    const speedParam = parseFloat(urlParams.get('speed'));
+    if (!isNaN(speedParam) && speedParam >= 0.5 && speedParam <= 30) {
+      document.getElementById('speedF').value = speedParam;
+    }
+  }
+  
+  if (urlParams.has('distance')) {
+    const distParam = parseFloat(urlParams.get('distance'));
+    if (!isNaN(distParam) && distParam >= 10 && distParam <= 1000) {
+      document.getElementById('distF').value = distParam;
+    }
+  }
+  
+  if (urlParams.has('speedA')) {
+    const speedA = parseFloat(urlParams.get('speedA'));
+    if (!isNaN(speedA) && speedA >= 0.5 && speedA <= 30) {
+      document.getElementById('spdA').value = speedA;
+      document.getElementById('spdADisplay').textContent = toFixedNum(speedA, 2);
+    }
+  }
+  
+  if (urlParams.has('speedB')) {
+    const speedB = parseFloat(urlParams.get('speedB'));
+    if (!isNaN(speedB) && speedB >= 0.5 && speedB <= 30) {
+      document.getElementById('spdB').value = speedB;
+      document.getElementById('spdBDisplay').textContent = toFixedNum(speedB, 2);
+    }
+  }
+  
+  if (urlParams.has('raceDist')) {
+    const raceDist = parseFloat(urlParams.get('raceDist'));
+    if (!isNaN(raceDist) && raceDist >= 10) {
+      document.getElementById('raceDist').value = raceDist;
+    }
+  }
+  
+  // Switch to specific tab if requested
+  if (urlParams.has('tab')) {
+    const tab = urlParams.get('tab');
+    if (tab === 'foundation') {
+      document.getElementById('tFoundation').click();
+    } else if (tab === 'formula') {
+      document.getElementById('tFormula').click();
+    } else if (tab === 'comparative') {
+      document.getElementById('tComparative').click();
+    }
+  }
+  
+  // Update the UI after applying parameters
+  updateFoundationStats();
+}
+
+/* ============================
   Tabs
    ============================ */
 const btnF=document.getElementById('tFoundation'), btnFormula=document.getElementById('tFormula'), btnC=document.getElementById('tComparative');
@@ -666,6 +734,11 @@ window.addEventListener('load', ()=>{
     timeD.disabled = (hv==='time');
     feedbackBox.textContent=''; predictInput.value='';
   };
+  
+  // Apply URL parameters if present (AUTO MODE)
+  setTimeout(() => {
+    applyURLParameters();
+  }, 100);
 });
 </script>
 </body>
