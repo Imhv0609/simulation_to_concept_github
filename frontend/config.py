@@ -28,7 +28,8 @@ SIMULATIONS_DIR = PROJECT_ROOT / "SimulationsNCERT-main"
 SIMULATION_SERVER_PORT = 8000
 
 # Detect if running on Streamlit Cloud
-IS_CLOUD = os.environ.get("STREAMLIT_SHARING_MODE") or os.environ.get("STREAMLIT_SERVER_HEADLESS")
+# Streamlit Cloud runs in /home/appuser, local machines don't
+IS_CLOUD = os.environ.get("HOME") == "/home/appuser" or os.path.exists("/home/appuser")
 
 # GitHub Pages URL for cloud deployment
 GITHUB_PAGES_URL = "https://imhv0609.github.io/simulation_to_concept_github/SimulationsNCERT-main"

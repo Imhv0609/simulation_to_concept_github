@@ -19,7 +19,8 @@ SIMULATION_CONTROL_MODE: Literal["MANUAL", "AUTO"] = "AUTO"
 # ENVIRONMENT DETECTION
 # ============================================
 # Detect if running on Streamlit Cloud
-IS_CLOUD = os.environ.get("STREAMLIT_SHARING_MODE") or os.environ.get("STREAMLIT_SERVER_HEADLESS")
+# Streamlit Cloud runs in /home/appuser, local machines don't
+IS_CLOUD = os.environ.get("HOME") == "/home/appuser" or os.path.exists("/home/appuser")
 
 # Base URLs
 LOCAL_BASE_URL = "http://localhost:8000"
